@@ -4,6 +4,7 @@ import JSZip from 'jszip';
 import { useImageBatch } from './hooks/useImageBatch';
 import ImageCard from './components/ImageCard';
 import ComparisonView from './components/ComparisonView';
+import FloatingToolbar from './components/FloatingToolbar';
 import { compressImage, formatBytes } from './utils/compressionUtils';
 import styles from './ImageCompressor.module.css';
 
@@ -40,6 +41,7 @@ export default function ImageCompressorTool() {
   const [isDragging, setIsDragging] = useState(false);
   const [activeImageId, setActiveImageId] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
+  const [activeTool, setActiveTool] = useState('select');
   const fileInputRef = useRef(null);
   const folderInputRef = useRef(null);
 
@@ -198,7 +200,16 @@ export default function ImageCompressorTool() {
       <div className={styles.mainLayout}>
         {/* Sidebar */}
         <div className={styles.sidebar}>
-          <div className={styles.sectionTitle} style={{ marginTop: 0 }}>الإعدادات</div>
+          {images.length === 0 && (
+            <div className={styles.dropzone} onClick={() => document.getElementById('fileInput').click()}>
+              <Upload size={32} color="var(--c2)" />
+              <div className={styles.dropzoneText}>
+                <h3>اسحب الصور هنا أو انقر للرفع</h3>
+                <p>بدء ضغط الصور بلمسة واحدة احترافية</p>
+              </div>
+            </div>
+          )}
+          <div className={styles.sectionTitle} style={{ marginTop: images.length === 0 ? 0 : 10 }}>الإعدادات</div>
           
           <div className={styles.inputGroup}>
             <label>الجودة: {quality}%</label>
@@ -301,12 +312,18 @@ export default function ImageCompressorTool() {
           </div>
         </div>
 
+        <FloatingToolbar 
+          activeTool={activeTool}
+          setActiveTool={setActiveTool}
+          fitToScreen={() => {}}
+          color="var(--c2)"
+        />
+
         <div className={styles.previewArea}>
           {images.length === 0 ? (
-            <div className={styles.dropzone} onClick={() => document.getElementById('fileInput').click()}>
-              <Upload size={64} color="var(--c2)" />
-              <h3>اسحب الصور هنا أو انقر للرفع</h3>
-              <p>بدء ضغط الصور بلمسة واحدة احترافية</p>
+            <div className={styles.emptyState}>
+               <ImageIcon size={64} color="var(--c2)" opacity={0.2} />
+               <p>اختر صوراً للبدء في ضغطها ومعاينتها هنا</p>
             </div>
           ) : (
             <>

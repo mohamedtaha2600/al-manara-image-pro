@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { 
   Upload, Download, RefreshCw, FileImage, 
   Trash2, FileVideo, CheckCircle2, AlertCircle,
-  Settings, Layers, Zap, Info, X
+  Settings, Layers, Zap, Info, X, Plus
 } from 'lucide-react';
 import styles from './ImageConverter.module.css';
 
@@ -17,7 +17,7 @@ export default function ImageConverterTool() {
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef(null);
 
-  const { load, isLoaded: isEngineReady, convertFile } = useConverter();
+  const { convertFile } = useConverter();
 
   const handleAddFiles = (newFiles) => {
     const validFiles = Array.from(newFiles).map(file => ({
@@ -40,6 +40,15 @@ export default function ImageConverterTool() {
     setFiles(prev => prev.map(f => f.id === id ? { ...f, overrideFormat: format } : f));
   };
 
+  const formatBytes = (bytes, decimals = 2) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const dm = decimals < 0 ? 0 : decimals;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+  };
+
   const startConversion = async () => {
     setIsProcessing(true);
     const pendingFiles = files.filter(f => f.status !== 'done');
@@ -51,7 +60,7 @@ export default function ImageConverterTool() {
 
       try {
         const format = fileObj.overrideFormat || targetFormat;
-        const result = await convertFile(fileObj.file, format);
+        const result = await convertFile(fileObj.file, format, quality / 100);
         setFiles(prev => prev.map(f => 
           f.id === fileObj.id ? { 
             ...f, 
@@ -114,7 +123,15 @@ export default function ImageConverterTool() {
       <div className={styles.mainLayout}>
         {/* 🛠️ Sidebar Settings */}
         <div className={styles.sidebar}>
-          <div className={styles.sectionTitle}>
+          <div className={styles.dropzone} onClick={() => fileInputRef.current.click()}>
+            <Upload size={32} color="var(--c3)" />
+            <div className={styles.dropzoneText}>
+              <h3>اسحب الملفات هنا أو انقر للرفع</h3>
+              <p>صور، فيديوهات، أو مجلدات كاملة</p>
+            </div>
+          </div>
+
+          <div className={styles.sectionTitle} style={{ marginTop: 0 }}>
             <Settings size={20} /> الإعدادات العامة
           </div>
 
@@ -125,16 +142,10 @@ export default function ImageConverterTool() {
               onChange={e => setTargetFormat(e.target.value)}
               className={styles.selectInput}
             >
-              <optgroup label="صور احترافية">
+              <optgroup label="الصور المدعومة">
                 <option value="webp">WebP (أفضل ضغط)</option>
-                <option value="png">PNG (جودة أصلية)</option>
-                <option value="jpg">JPG (متوافق جداً)</option>
-                <option value="avif">AVIF (جيل جديد)</option>
-              </optgroup>
-              <optgroup label="صيغ أخرى">
-                <option value="tiff">TIFF (للطباعة)</option>
-                <option value="bmp">BMP (خام)</option>
-                <option value="gif">GIF (متحرك)</option>
+                <option value="png">PNG (بدون فقدان جودة)</option>
+                <option value="jpg">JPG (متوافق مع الجميع)</option>
               </optgroup>
             </select>
           </div>
@@ -151,9 +162,9 @@ export default function ImageConverterTool() {
           </div>
 
           <div className={styles.inputGroup}>
-            <label>ذكاء التحويل:</label>
+            <label>معلومات:</label>
             <div className={styles.infoBox}>
-              <Info size={14} /> سيتم استخدام محرك FFmpeg للتحويلات المعقدة لضمان أعلى دقة بصرية.
+              <Info size={14} /> يتم التحويل فورياً داخل المتصفح لضمان أقصى درجات الخصوصية والسرعة.
             </div>
           </div>
 
@@ -163,28 +174,23 @@ export default function ImageConverterTool() {
               onClick={startConversion}
               disabled={files.length === 0 || isProcessing}
             >
-              {isProcessing ? <RefreshCw className="spin" /> : <Zap size={18} />}
-              {isProcessing ? 'جاري التحويل...' : 'بدء التحويل الجماعي'}
+              {isProcessing ? <RefreshCw className="spin" size={18} /> : <Zap size={18} />}
+              <span style={{ marginRight: '8px' }}>{isProcessing ? 'جاري التحويل...' : 'بدء التحويل الجماعي'}</span>
             </button>
-            
-            {isProcessing && !isEngineReady && (
-              <div style={{ fontSize: '0.7rem', color: '#888', textAlign: 'center', marginTop: '10px' }}>
-                جاري تحضير المحرك المتقدم (لأول مرة فقط)...
-              </div>
-            )}
           </div>
         </div>
 
         {/* 🖼️ Content Area */}
         <div className={styles.contentArea}>
-          {files.length > 0 && (
-            <div className={styles.topActions}>
-              <div className={styles.statsSummary}>
-                تم اختيار <span>{files.length}</span> ملفات 
-                {files.filter(f => f.status === 'done').length > 0 && (
-                  <> — تم تحويل <span>{files.filter(f => f.status === 'done').length}</span> بنجاح</>
-                )}
-              </div>
+          <div className={styles.topActions}>
+            <div className={styles.statsSummary}>
+              {files.length > 0 ? (
+                <>تم اختيار <span>{files.length}</span> ملفات {files.filter(f => f.status === 'done').length > 0 && <> — تم تحويل <span>{files.filter(f => f.status === 'done').length}</span> بنجاح</>}</>
+              ) : (
+                'قائمة الملفات جاهزة للإضافة'
+              )}
+            </div>
+            {files.length > 0 && (
               <div className={styles.actionButtons}>
                 {files.filter(f => f.status === 'done').length > 0 && (
                   <button className={styles.btnZip} onClick={downloadAll}>
@@ -195,33 +201,34 @@ export default function ImageConverterTool() {
                   مسح الكل
                 </button>
               </div>
-            </div>
-          )}
+            )}
+          </div>
 
-          {files.length === 0 ? (
-            <div className={styles.dropzone} onClick={() => fileInputRef.current.click()}>
-              <div className={styles.uploadIcon}>
-                <Upload size={60} color="var(--conv-primary)" />
-              </div>
-              <h2 style={{ fontWeight: 900 }}>اسحب الملفات هنا</h2>
-              <p style={{ color: '#666' }}>صور، فيديوهات (لتحويلها لـ GIF)، أو مجلدات كاملة</p>
-              <button className={styles.uploadBtnMini}>اختيار ملفات</button>
-            </div>
-          ) : (
-            <div className={styles.tableContainer + " " + styles.scrollBar}>
-              <table className={styles.filesTable}>
-                <thead>
-                  <tr>
-                    <th style={{ width: '60px' }}>المعاينة</th>
-                    <th>اسم الملف</th>
-                    <th>الحجم الأصلي</th>
-                    <th>الصيغة</th>
-                    <th>الحالة</th>
-                    <th style={{ width: '100px' }}>الإجراء</th>
+          <div className={styles.tableContainer + " " + styles.scrollBar}>
+            <table className={styles.filesTable}>
+              <thead>
+                <tr>
+                  <th style={{ width: '60px' }}>المعاينة</th>
+                  <th>اسم الملف</th>
+                  <th>الحجم الأصلي</th>
+                  <th>الحجم الجديد</th>
+                  <th>الصيغة</th>
+                  <th>الحالة</th>
+                  <th style={{ width: '100px' }}>الإجراء</th>
+                </tr>
+              </thead>
+              <tbody>
+                {files.length === 0 ? (
+                  <tr className={styles.fileRow} onClick={() => fileInputRef.current.click()} style={{ cursor: 'pointer' }}>
+                    <td colSpan="7" style={{ textAlign: 'center', padding: '100px 40px', color: 'rgba(255,255,255,0.1)' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '15px' }}>
+                        <Upload size={48} />
+                        <span style={{ fontSize: '1.1rem' }}>انقر هنا أو اسحب الملفات لبناء قائمة التحويل</span>
+                      </div>
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {files.map(file => (
+                ) : (
+                  files.map(file => (
                     <tr key={file.id} className={styles.fileRow}>
                       <td>
                         <div className={styles.thumbWrapper} onClick={() => setSelectedPreview(file)}>
@@ -232,7 +239,8 @@ export default function ImageConverterTool() {
                         </div>
                       </td>
                       <td className={styles.fileNameCell}>{file.name}</td>
-                      <td>{(file.size / 1024 / 1024).toFixed(2)} MB</td>
+                      <td>{formatBytes(file.size)}</td>
+                      <td>{file.resultSize > 0 ? formatBytes(file.resultSize) : '-'}</td>
                       <td>
                         <select 
                           value={file.overrideFormat || targetFormat}
@@ -243,27 +251,19 @@ export default function ImageConverterTool() {
                           <option value="webp">WebP</option>
                           <option value="png">PNG</option>
                           <option value="jpg">JPG</option>
-                          <option value="avif">AVIF</option>
-                          <option value="tiff">TIFF</option>
-                          <option value="gif">GIF</option>
                         </select>
                       </td>
                       <td>
                         <span className={`${styles.statusBadge} ${styles['status' + file.status.charAt(0).toUpperCase() + file.status.slice(1)]}`}>
                           {file.status === 'pending' ? 'انتظار' : file.status === 'processing' ? 'جاري...' : file.status === 'done' ? 'تم' : 'خطأ'}
                         </span>
-                        {file.resultSize > 0 && (
-                          <div style={{ fontSize: '0.7rem', color: 'var(--conv-primary)', marginTop: '4px' }}>
-                            {(file.resultSize / 1024 / 1024).toFixed(2)} MB
-                          </div>
-                        )}
                       </td>
                       <td>
-                        <div style={{ display: 'flex', gap: '5px' }}>
+                        <div style={{ display: 'flex', gap: '8px' }}>
                           {file.status === 'done' && (
-                            <button className={styles.downloadBtnMini} onClick={() => downloadFile(file)}>
+                            <a href={file.resultUrl} download={`converted_${file.name.split('.')[0]}.${file.finalFormat}`} className={styles.downloadBtnMini}>
                               <Download size={16} />
-                            </button>
+                            </a>
                           )}
                           <button className={styles.deleteBtn} onClick={() => removeFile(file.id)}>
                             <Trash2 size={16} />
@@ -271,11 +271,17 @@ export default function ImageConverterTool() {
                         </div>
                       </td>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  ))
+                )}
+              </tbody>
+            </table>
+            
+            <div className={styles.addMoreRow}>
+              <button className={styles.btnAddRow} onClick={() => fileInputRef.current.click()}>
+                <Plus size={20} /> إضافة ملفات جديدة للقائمة
+              </button>
             </div>
-          )}
+          </div>
           
           <input 
             type="file" 

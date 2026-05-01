@@ -33,7 +33,7 @@
 }
 
 .toolBtn.active {
-  background: var(--tool-color, var(--c1));
+  background: var(--tool-color, var(--c2));
   color: #fff;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.3); /* Subdued shadow instead of glowing spread */
+  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
 }

@@ -30,8 +30,8 @@ export default function ImageMergerTool() {
   const [quality, setQuality] = useState(0.9);
 
   // Freeform Canvas settings
-  const [canvasWidth, setCanvasWidth] = useState(1920);
-  const [canvasHeight, setCanvasHeight] = useState(1080);
+  const [canvasWidth, setCanvasWidth] = useState(1200);
+  const [canvasHeight, setCanvasHeight] = useState(800);
   const [unit, setUnit] = useState('px'); // 'px', 'cm'
   const [presetId, setPresetId] = useState('custom');
   
@@ -70,46 +70,27 @@ export default function ImageMergerTool() {
     const validFiles = Array.from(files).filter(f => f.type.startsWith('image/'));
     if (validFiles.length === 0) return;
     
-    let loadedCount = 0;
-    const newImages = [];
-    
     validFiles.forEach((file) => {
       const url = URL.createObjectURL(file);
       const img = new Image();
+      img.src = url;
       img.onload = () => {
-        newImages.push({
-          id: Date.now() + Math.random(),
-          file,
-          url,
+        const newImg = {
+          id: Math.random().toString(36).substr(2, 9),
           img,
+          url,
           originalW: img.width,
           originalH: img.height,
-          freeX: 0,
-          freeY: 0,
-          freeW: img.width,
-          freeH: img.height,
-          scale: 1
-        });
-        loadedCount++;
-        if (loadedCount === validFiles.length) {
-          setImages(prev => {
-             const updated = [...prev, ...newImages];
-             // Auto position in free mode initially
-             if (layout === 'free') {
-                return updated.map((item, idx) => ({
-                   ...item,
-                   freeX: (idx * 50) % 500,
-                   freeY: (idx * 50) % 500
-                }));
-             }
-             return updated;
-          });
-          if (images.length === 0) {
-            setTimeout(fitToScreen, 100);
-          }
-        }
+          // Initialize freeform properties
+          freeX: 50,
+          freeY: 50,
+          freeW: img.width > 400 ? 400 : img.width,
+          freeH: img.height * (img.width > 400 ? 400 / img.width : 1),
+          scale: 1,
+          rotation: 0
+        };
+        setImages(prev => [...prev, newImg]);
       };
-      img.src = url;
     });
   };
 
@@ -213,25 +194,27 @@ export default function ImageMergerTool() {
     }
     
     return { totalW, totalH, items };
-  }, [images, layout, canvasWidth, canvasHeight, padding, gridCols]);
+  }, [images, layout, canvasWidth, canvasHeight, padding, gridCols, gridPreset, gridRows]);
 
-  const renderMergedImage = useCallback(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
+  const renderMergedImage = useCallback((isDownload = false) => {
+    const canvas = isDownload ? document.createElement('canvas') : canvasRef.current;
+    if (!canvas) return null;
+    
     const { totalW, totalH, items } = getLayoutData();
-
-    if (totalW === 0 || totalH === 0) {
-       canvas.width = 0; canvas.height = 0; return;
-    }
+    if (totalW === 0 || totalH === 0) return null;
 
     canvas.width = totalW;
     canvas.height = totalH;
+    const ctx = canvas.getContext('2d');
 
-    const isInteracting = dragState || activeHandle;
+    // Draw base background
+    ctx.fillStyle = bgColor;
+    ctx.fillRect(0, 0, totalW, totalH);
+
+    const isInteracting = !isDownload && (dragState || activeHandle);
     
-    // Dim background if interacting or in crop mode
-    if (isInteracting || activeTool === 'crop') {
+    // Dim background for interaction focus
+    if (isInteracting || (activeTool === 'crop' && !isDownload)) {
       ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
       ctx.fillRect(0, 0, totalW, totalH);
     }
@@ -239,15 +222,12 @@ export default function ImageMergerTool() {
     items.forEach((item, idx) => {
       let x = item.x, y = item.y, w = item.w, h = item.h;
       
-      // If dragging, use drag coordinates
-      if (dragState && dragState.id === item.id) {
+      if (!isDownload && dragState && dragState.id === item.id) {
         x = dragState.currentX;
         y = dragState.currentY;
       }
 
-      // If this is the active image and we are interacting, draw it "above" the dimming
-      if (isInteracting && item.id === activeImgId) {
-        // Clear its area or just draw it normally (it will be drawn over the dimming)
+      if (!isDownload && isInteracting && item.id === activeImgId) {
         ctx.save();
         ctx.shadowBlur = 20;
         ctx.shadowColor = 'rgba(0,0,0,0.5)';
@@ -257,7 +237,6 @@ export default function ImageMergerTool() {
         ctx.drawImage(item.img, x, y, w, h);
       }
       
-      // Draw Numbers
       if (showNumbers) {
         ctx.save();
         const fontSize = Math.max(20, Math.min(w, h) * 0.15);
@@ -273,26 +252,25 @@ export default function ImageMergerTool() {
         ctx.restore();
       }
       
-      // Draw selection border and handles if active
-      if (item.id === activeImgId) {
+      if (!isDownload && activeImgId === item.id && activeTool !== 'hand') {
         ctx.save();
         ctx.strokeStyle = '#ffd600';
-        ctx.lineWidth = 2 / zoom;
+        ctx.lineWidth = 3 / zoom;
         ctx.setLineDash([5 / zoom, 5 / zoom]);
         ctx.strokeRect(x, y, w, h);
         
-        // Draw Handles (Corners)
-        const hs = 8 / zoom; // handle size
+        const hs = 6 / zoom;
         ctx.fillStyle = '#ffd600';
         ctx.setLineDash([]);
-        ctx.fillRect(x - hs, y - hs, hs * 2, hs * 2); // TL
-        ctx.fillRect(x + w - hs, y - hs, hs * 2, hs * 2); // TR
-        ctx.fillRect(x - hs, y + h - hs, hs * 2, hs * 2); // BL
-        ctx.fillRect(x + w - hs, y + h - hs, hs * 2, hs * 2); // BR
-        
+        ctx.fillRect(x - hs, y - hs, hs * 2, hs * 2); 
+        ctx.fillRect(x + w - hs, y - hs, hs * 2, hs * 2); 
+        ctx.fillRect(x - hs, y + h - hs, hs * 2, hs * 2); 
+        ctx.fillRect(x + w - hs, y + h - hs, hs * 2, hs * 2); 
         ctx.restore();
       }
     });
+
+    return canvas;
   }, [getLayoutData, bgColor, dragState, activeImgId, zoom, showNumbers, activeTool, activeHandle]);
 
   useEffect(() => {
@@ -306,9 +284,9 @@ export default function ImageMergerTool() {
   }, [renderMergedImage]);
 
   const fitToScreen = () => {
-    if (!previewAreaRef.current || !canvasRef.current || images.length === 0) return;
-    const pw = previewAreaRef.current.clientWidth - 40;
-    const ph = previewAreaRef.current.clientHeight - 40;
+    if (!previewAreaRef.current || !canvasRef.current) return;
+    const pw = previewAreaRef.current.clientWidth - 120; // More padding for "Photoshop" feel
+    const ph = previewAreaRef.current.clientHeight - 120;
     const cw = canvasRef.current.width;
     const ch = canvasRef.current.height;
     if (cw === 0 || ch === 0) return;
@@ -500,30 +478,23 @@ export default function ImageMergerTool() {
   const handleDownload = () => {
     if (images.length === 0) return;
     
-    // Temporarily remove selection box for export
-    const currentActive = activeImgId;
-    setActiveImgId(null);
+    showStatus('جاري معالجة الصورة...');
     
-    setTimeout(() => {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-      
-      showStatus('جاري معالجة الصورة...');
-      
-      const ext = exportFormat === 'image/jpeg' ? 'jpg' : exportFormat === 'image/webp' ? 'webp' : 'png';
-      const filename = `AlManara_Merger_${Date.now()}.${ext}`;
-      
-      const dataUrl = canvas.toDataURL(exportFormat, quality);
-      const link = document.createElement('a');
-      link.href = dataUrl;
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      showStatus('تم التحميل بنجاح!');
-      
-      setActiveImgId(currentActive);
-    }, 50);
+    // Use the unified rendering function with isDownload = true
+    const canvas = renderMergedImage(true);
+    if (!canvas) return;
+    
+    const ext = exportFormat === 'image/jpeg' ? 'jpg' : exportFormat === 'image/webp' ? 'webp' : 'png';
+    const filename = `AlManara_Merger_${Date.now()}.${ext}`;
+    
+    const dataUrl = canvas.toDataURL(exportFormat, quality);
+    const link = document.createElement('a');
+    link.href = dataUrl;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showStatus('تم التحميل بنجاح!');
   };
 
   return (
@@ -670,6 +641,7 @@ export default function ImageMergerTool() {
                   <input type="number" className={styles.input} value={toDisplayValue(canvasWidth)} onChange={(e) => {
                       setCanvasWidth(fromDisplayValue(parseFloat(e.target.value) || 0));
                       setPresetId('custom');
+                      setTimeout(fitToScreen, 100);
                   }} />
                 </div>
                 <div style={{flex: 1}}>
@@ -677,6 +649,7 @@ export default function ImageMergerTool() {
                   <input type="number" className={styles.input} value={toDisplayValue(canvasHeight)} onChange={(e) => {
                       setCanvasHeight(fromDisplayValue(parseFloat(e.target.value) || 0));
                       setPresetId('custom');
+                      setTimeout(fitToScreen, 100);
                   }} />
                 </div>
               </div>

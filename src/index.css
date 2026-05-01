@@ -8,6 +8,9 @@
   --text: #f0f0f8;
   --text-dim: #888;
   --glow: 0 0 40px;
+  
+  --sidebar-bg: rgba(12, 12, 18, 0.98); /* Solid dark professional background */
+  --toolbar-bg: rgba(255, 255, 255, 0.01); /* Subtle strip background */
 
   /* Tool Colors */
   --c1: #00e676; /* Grid Splitter */

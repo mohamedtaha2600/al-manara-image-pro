@@ -22,7 +22,7 @@
   display: flex;
   flex-direction: column;
   gap: 15px;
-  background: rgba(255, 255, 255, 0.01);
+  background: var(--sidebar-bg);
   overflow-y: auto;
   direction: ltr;
 }
@@ -112,11 +112,13 @@
   display: flex;
   flex-direction: column;
   background: #040408;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 24px 24px;
 }
 
 .previewTopSection {
   flex: 1;
-  background: #020205;
+  background: transparent;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -607,35 +609,53 @@
 }
 
 .dropzone {
-  flex: 1;
-  margin: 30px;
-  border: 2px dashed var(--border);
-  border-radius: 25px;
+  width: 100%;
+  padding: 20px 10px;
+  border: 2px dashed rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 20px;
-  background: rgba(255, 255, 255, 0.01);
-  transition: 0.3s;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.02);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
+  margin-bottom: 20px;
 }
 
 .dropzone:hover {
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(255, 255, 255, 0.05);
   border-color: var(--c2);
+  transform: translateY(-2px);
+}
+
+.dropzoneText {
+  text-align: center;
 }
 
 .dropzone h3 {
   margin: 0;
-  font-size: 1.5rem;
+  font-size: 0.9rem;
   color: #fff;
+  font-weight: 700;
 }
 
 .dropzone p {
-  margin: 0;
-  font-size: 0.9rem;
+  margin: 5px 0 0;
+  font-size: 0.7rem;
   color: var(--text-dim);
+}
+
+.emptyState {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 15px;
+  color: rgba(255, 255, 255, 0.2);
+  font-size: 0.9rem;
 }
 
 .btnMain {
