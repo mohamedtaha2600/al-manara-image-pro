@@ -21,6 +21,8 @@ export default function ImageMergerTool() {
   const [images, setImages] = useState([]);
   const [layout, setLayout] = useState('horizontal'); // horizontal, vertical, grid, free
   const [gridCols, setGridCols] = useState(2);
+  const [gridRows, setGridRows] = useState(2);
+  const [gridPreset, setGridPreset] = useState('auto'); // auto, custom, 2x2, etc.
   const [padding, setPadding] = useState(0);
   const [bgColor, setBgColor] = useState('#ffffff');
   const [exportFormat, setExportFormat] = useState('image/png');
@@ -168,21 +170,25 @@ export default function ImageMergerTool() {
       totalH = images.length > 0 ? currY : 0;
     } else if (layout === 'grid') {
       const cols = parseInt(gridCols) || 1;
-      const rows = Math.ceil(images.length / cols);
+      const rows = gridPreset === 'auto' ? Math.ceil(images.length / cols) : (parseInt(gridRows) || 1);
       const cellW = images.length > 0 ? Math.max(...images.map(img => img.originalW)) : 0;
       const cellH = images.length > 0 ? Math.max(...images.map(img => img.originalH)) : 0;
       
       totalW = images.length > 0 ? cols * cellW + (cols - 1) * padding + padding * 2 : 0;
       totalH = images.length > 0 ? rows * cellH + (rows - 1) * padding + padding * 2 : 0;
       
+      let drawnCount = 0;
       images.forEach((img, i) => {
-        const row = Math.floor(i / cols);
-        const col = i % cols;
+        if (gridPreset !== 'auto' && drawnCount >= rows * cols) return;
+
+        const row = Math.floor(drawnCount / cols);
+        const col = drawnCount % cols;
         const x = padding + col * (cellW + padding);
         const y = padding + row * (cellH + padding);
         const drawX = x + (cellW - img.originalW) / 2;
         const drawY = y + (cellH - img.originalH) / 2;
         items.push({ id: img.id, img: img.img, x: drawX, y: drawY, w: img.originalW, h: img.originalH });
+        drawnCount++;
       });
     }
     
@@ -435,10 +441,48 @@ export default function ImageMergerTool() {
                   </div>
                   
                   {layout === 'grid' && (
-                    <div className={styles.inputGroup}>
-                      <label>عدد الأعمدة</label>
-                      <input type="number" className={styles.input} value={gridCols} onChange={(e) => setGridCols(Math.max(1, parseInt(e.target.value) || 1))} min="1"/>
-                    </div>
+                    <>
+                      <div className={styles.inputGroup}>
+                        <label>نوع الشبكة (Grid Type)</label>
+                        <select className={styles.select} value={gridPreset} onChange={(e) => {
+                          const val = e.target.value;
+                          setGridPreset(val);
+                          if (val !== 'auto' && val !== 'custom') {
+                            const [c, r] = val.split('x');
+                            setGridCols(parseInt(c));
+                            setGridRows(parseInt(r));
+                          }
+                          setTimeout(fitToScreen, 100);
+                        }}>
+                          <option value="auto">تلقائي (حسب عدد الصور)</option>
+                          <option value="custom">مخصص (صفوف وأعمدة)</option>
+                          <option value="2x2">2 × 2 (4 صور)</option>
+                          <option value="3x3">3 × 3 (9 صور)</option>
+                          <option value="4x4">4 × 4 (16 صورة)</option>
+                          <option value="2x3">2 عمود × 3 صفوف</option>
+                          <option value="3x2">3 أعمدة × 2 صفوف</option>
+                        </select>
+                      </div>
+
+                      <div className={styles.inputGroup} style={{flexDirection: 'row', gap: '10px'}}>
+                        <div style={{flex: 1}}>
+                          <label>عدد الأعمدة</label>
+                          <input type="number" className={styles.input} value={gridCols} onChange={(e) => {
+                             setGridCols(Math.max(1, parseInt(e.target.value) || 1));
+                             if (gridPreset !== 'auto') setGridPreset('custom');
+                          }} min="1"/>
+                        </div>
+                        {gridPreset !== 'auto' && (
+                          <div style={{flex: 1}}>
+                            <label>عدد الصفوف</label>
+                            <input type="number" className={styles.input} value={gridRows} onChange={(e) => {
+                               setGridRows(Math.max(1, parseInt(e.target.value) || 1));
+                               setGridPreset('custom');
+                            }} min="1"/>
+                          </div>
+                        )}
+                      </div>
+                    </>
                   )}
 
                   {layout === 'free' && (

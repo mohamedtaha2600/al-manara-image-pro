@@ -1,21 +1,21 @@
 .floatingToolbar {
-  position: absolute;
-  top: 20px;
-  right: 20px;
-  background: rgba(17, 17, 20, 0.85);
-  border: 1px solid var(--border);
-  border-radius: 12px;
+  background: var(--wat-surface, rgba(17, 17, 20, 0.95));
+  border-right: 1px solid var(--border);
+  border-left: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 8px;
-  z-index: 1500;
-  backdrop-filter: blur(10px);
+  padding: 12px 8px;
+  z-index: 10;
+  width: 56px;
+  height: 100%;
+  align-items: center;
+  box-shadow: -5px 0 15px rgba(0,0,0,0.2);
 }
 
 .toolBtn {
-  width: 42px;
-  height: 42px;
+  width: 40px;
+  height: 40px;
   border-radius: 8px;
   border: none;
   background: transparent;
@@ -28,12 +28,12 @@
 }
 
 .toolBtn:hover {
-  background: rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.08);
   color: white;
 }
 
 .toolBtn.active {
   background: var(--tool-color, var(--c1));
   color: #fff;
-  box-shadow: 0 0 10px var(--tool-color, var(--c1));
+  box-shadow: 0 4px 10px rgba(0,0,0,0.3); /* Subdued shadow instead of glowing spread */
 }

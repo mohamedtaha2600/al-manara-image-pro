@@ -425,6 +425,8 @@ export default function WatermarkTool() {
           </div>
         </aside>
 
+        <FloatingToolbar activeTool={activeTool} setActiveTool={setActiveTool} fitToScreen={fitToScreen} setZoom={setZoom} hasCells={!!activeFile} simpleMode={true} color="var(--c5)" />
+
         <div className={styles.workspace} ref={containerRef}>
           <div className={styles.canvasContainer} onMouseDown={handleMouseDown}
                style={{ cursor: (activeTool === 'pan' || spacePressed) ? (stateRef.current.isPanning ? 'grabbing' : 'grab') : (activeTool === 'select' ? 'default' : 'crosshair') }}
@@ -439,13 +441,28 @@ export default function WatermarkTool() {
               <div className={styles.canvasWrapper} style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})` }}>
                 <canvas ref={canvasRef} />
               </div>
-            )}
-          </div>
-
-          <FloatingToolbar activeTool={activeTool} setActiveTool={setActiveTool} fitToScreen={fitToScreen} setZoom={setZoom} hasCells={!!activeFile} simpleMode={true} color="var(--c5)" />
-
           <div className={styles.bottomBar}>
             <div className={styles.imageListHeader}>
+              <span>قائمة الصور ({files.length})</span>
+              <div style={{display: 'flex', gap: '10px'}}>
+                <button className={styles.addMoreBtn} onClick={toggleAllSelection} style={{background: 'rgba(255,255,255,0.1)'}}>تحديد الكل</button>
+                <button className={styles.addMoreBtn} onClick={() => fileInputRef.current.click()}>+ إضافة صور</button>
+              </div>
+            </div>
+            <div className={styles.imageListItems + " " + styles.scrollBar}>
+              {files.map((f, i) => (
+                <div key={f.id} className={`${styles.imageThumb} ${i === activeIndex ? styles.thumbActive : ''}`} onClick={() => setActiveIndex(i)} style={{opacity: f.isSelected ? 1 : 0.4}}>
+                  <img src={f.previewUrl} alt="" />
+                  <div className={styles.thumbOverlay}>{i + 1}</div>
+                  <input type="checkbox" checked={f.isSelected} onChange={(e) => toggleSelection(e, f.id)} style={{position: 'absolute', top: 5, right: 5, cursor: 'pointer', zIndex: 10}} onClick={e => e.stopPropagation()} />
+                  <button className={styles.deleteThumbBtn} onClick={(e) => handleDeleteFile(e, i)}><X size={14} /></button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+      <input type="file" ref={fileInputRef} multiple hidden onChange={e => handleAddFiles(e.target.files)} />
               <span>قائمة الصور ({files.length})</span>
               <div style={{display: 'flex', gap: '10px'}}>
                 <button className={styles.addMoreBtn} onClick={toggleAllSelection} style={{background: 'rgba(255,255,255,0.1)'}}>تحديد الكل</button>
