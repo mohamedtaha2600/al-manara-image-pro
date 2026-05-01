@@ -51,13 +51,13 @@
 }
 
 .mainLayout {
-  display: grid;
-  grid-template-columns: 320px 1fr;
+  display: flex;
   flex: 1;
   overflow: hidden;
 }
 
 .previewArea {
+  flex: 1;
   position: relative;
   background: #000;
   display: flex;
