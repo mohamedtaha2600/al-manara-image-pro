@@ -30,6 +30,11 @@
   gap: 24px;
   overflow-y: auto;
   box-shadow: -5px 0 30px rgba(0,0,0,0.3);
+  direction: ltr;
+}
+
+.sidebar > * {
+  direction: rtl;
 }
 
 .sidebar::-webkit-scrollbar { width: 4px; }

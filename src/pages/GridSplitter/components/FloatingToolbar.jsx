@@ -1,4 +1,4 @@
-import { MousePointer2, Hand, Ruler, Eye, Maximize, Grid } from 'lucide-react';
+import { MousePointer2, Hand, Ruler, Eye, Maximize, Grid, Crop } from 'lucide-react';
 import styles from './FloatingToolbar.module.css';
 
 export default function FloatingToolbar({
@@ -31,6 +31,13 @@ export default function FloatingToolbar({
         onClick={() => setActiveTool('pan')}
       >
         <Hand size={20} />
+      </button>
+      <button 
+        title="أداة الاقتصاص (Crop)"
+        className={`${styles.toolBtn} ${activeTool === 'crop' ? styles.active : ''}`}
+        onClick={() => setActiveTool('crop')}
+      >
+        <Crop size={20} />
       </button>
 
       {!simpleMode && (

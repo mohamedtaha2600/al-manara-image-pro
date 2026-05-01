@@ -440,6 +440,14 @@ export default function ImageResizerTool() {
           </div>
         </aside>
 
+        <FloatingToolbar 
+          activeTool={activeTool} setActiveTool={setActiveTool}
+          fitToScreen={fitToScreen} setZoom={setZoom}
+          hasCells={!!activeFile}
+          simpleMode={true}
+          color="var(--c4)"
+        />
+
         <div className={styles.workspace} ref={containerRef}>
           <div 
             className={styles.canvasContainer} 
@@ -478,14 +486,6 @@ export default function ImageResizerTool() {
               </div>
             )}
           </div>
-
-          <FloatingToolbar 
-            activeTool={activeTool} setActiveTool={setActiveTool}
-            fitToScreen={fitToScreen} setZoom={setZoom}
-            hasCells={!!activeFile}
-            simpleMode={true}
-            color="var(--c4)"
-          />
 
           <div className={styles.bottomBar}>
             <div className={styles.imageListHeader}>

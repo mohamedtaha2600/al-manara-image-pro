@@ -413,6 +413,12 @@ export default function GridSplitterTool() {
           handleResetAll={handleResetAll} setShowTutorial={setShowTutorial}
         />
 
+        <FloatingToolbar
+          activeTool={activeTool} setActiveTool={setActiveTool} showRulers={showRulers} setShowRulers={setShowRulers}
+          showGrid={showGrid} setShowGrid={setShowGrid} hasCells={cells.length > 0} previewMode={previewMode}
+          setPreviewMode={setPreviewMode} setPreviewIndex={setPreviewIndex} fitToScreen={fitToScreen}
+        />
+
         <div 
           className={styles.previewArea} ref={previewRef} 
           onMouseDown={handleMouseDown} 
@@ -446,11 +452,6 @@ export default function GridSplitterTool() {
             previewMode={previewMode} handleResetCell={handleResetCell}
           />
 
-          <FloatingToolbar
-            activeTool={activeTool} setActiveTool={setActiveTool} showRulers={showRulers} setShowRulers={setShowRulers}
-            showGrid={showGrid} setShowGrid={setShowGrid} hasCells={cells.length > 0} previewMode={previewMode}
-            setPreviewMode={setPreviewMode} setPreviewIndex={setPreviewIndex} fitToScreen={fitToScreen}
-          />
         </div>
       </div>
     </div>
