@@ -13,10 +13,11 @@ export default function FloatingToolbar({
   setPreviewMode,
   setPreviewIndex,
   fitToScreen,
-  simpleMode = false // New Prop
+  simpleMode = false,
+  color = 'var(--c1)' // Default to GridSplitter color
 }) {
   return (
-    <div className={styles.floatingToolbar}>
+    <div className={styles.floatingToolbar} style={{'--tool-color': color}}>
       <button 
         title="أداة التحديد والقص"
         className={`${styles.toolBtn} ${activeTool === 'select' ? styles.active : ''}`}

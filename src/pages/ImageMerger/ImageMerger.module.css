@@ -228,6 +228,11 @@
   border-color: var(--c6);
 }
 
+.select option {
+  background: var(--bg);
+  color: var(--text);
+}
+
 .rangeInput {
   width: 100%;
   accent-color: var(--c6);

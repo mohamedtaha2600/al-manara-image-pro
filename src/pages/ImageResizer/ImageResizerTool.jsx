@@ -153,7 +153,8 @@ export default function ImageResizerTool() {
             originalWidth: img.width,
             originalHeight: img.height,
             previewUrl: url,
-            status: 'pending'
+            status: 'pending',
+            isSelected: true
           });
         };
         img.src = url;
@@ -163,6 +164,16 @@ export default function ImageResizerTool() {
     Promise.all(promises).then(newObjs => {
       setFiles(prev => [...prev, ...newObjs]);
     });
+  };
+
+  const toggleSelection = (e, id) => {
+    e.stopPropagation();
+    setFiles(prev => prev.map(f => f.id === id ? { ...f, isSelected: !f.isSelected } : f));
+  };
+
+  const toggleAllSelection = () => {
+    const allSelected = files.length > 0 && files.every(f => f.isSelected);
+    setFiles(prev => prev.map(f => ({ ...f, isSelected: !allSelected })));
   };
 
   const handleDeleteFile = (e, index) => {
@@ -350,15 +361,16 @@ export default function ImageResizerTool() {
   };
 
   const handleBatchExport = async () => {
-    if (files.length === 0) return;
+    const filesToExport = files.filter(f => f.isSelected);
+    if (filesToExport.length === 0) return;
     setIsProcessing(true);
     setProgress(0);
     const zip = new JSZip();
     
-    for (let i = 0; i < files.length; i++) {
-      const result = await processFile(files[i]);
+    for (let i = 0; i < filesToExport.length; i++) {
+      const result = await processFile(filesToExport[i]);
       zip.file(`cropped_${result.name}`, result.blob);
-      setProgress(Math.round(((i + 1) / files.length) * 100));
+      setProgress(Math.round(((i + 1) / filesToExport.length) * 100));
     }
 
     const content = await zip.generateAsync({ type: 'blob' });
@@ -370,6 +382,8 @@ export default function ImageResizerTool() {
     setIsProcessing(false);
     setProgress(0);
   };
+
+  const selectedCount = files.filter(f => f.isSelected).length;
 
   return (
     <div className={styles.container}>
@@ -411,7 +425,7 @@ export default function ImageResizerTool() {
             <button className={styles.btnSecondary} onClick={handleApplyToAll} disabled={!activeFile || isProcessing}>
               <Layers size={18} /> تطبيق على الكل
             </button>
-            <button className={styles.btnMain} onClick={handleBatchExport} disabled={files.length === 0 || isProcessing}>
+            <button className={styles.btnMain} onClick={handleBatchExport} disabled={selectedCount === 0 || isProcessing}>
               {isProcessing ? (
                 <div className={styles.progressContainer}>
                   <div className={styles.progressBar} style={{width: `${progress}%`}}></div>
@@ -419,7 +433,7 @@ export default function ImageResizerTool() {
                 </div>
               ) : (
                 <>
-                  <Download size={20} /> تنزيل الكل ({files.length})
+                  <Download size={20} /> تنزيل المحدد ({selectedCount})
                 </>
               )}
             </button>
@@ -470,12 +484,16 @@ export default function ImageResizerTool() {
             fitToScreen={fitToScreen} setZoom={setZoom}
             hasCells={!!activeFile}
             simpleMode={true}
+            color="var(--c4)"
           />
 
           <div className={styles.bottomBar}>
             <div className={styles.imageListHeader}>
               <span>قائمة الصور ({files.length})</span>
-              <button className={styles.addMoreBtn} onClick={() => fileInputRef.current.click()}>+ إضافة صور</button>
+              <div style={{display: 'flex', gap: '10px'}}>
+                <button className={styles.addMoreBtn} onClick={toggleAllSelection} style={{background: 'rgba(255,255,255,0.1)'}}>تحديد الكل</button>
+                <button className={styles.addMoreBtn} onClick={() => fileInputRef.current.click()}>+ إضافة صور</button>
+              </div>
             </div>
             <div className={styles.imageListItems + " " + styles.scrollBar}>
               {files.map((f, i) => (
@@ -483,9 +501,11 @@ export default function ImageResizerTool() {
                   key={f.id} 
                   className={`${styles.imageThumb} ${i === activeIndex ? styles.thumbActive : ''}`}
                   onClick={() => setActiveIndex(i)}
+                  style={{opacity: f.isSelected ? 1 : 0.4}}
                 >
                   <img src={f.previewUrl} alt="" />
                   <div className={styles.thumbOverlay}>{i + 1}</div>
+                  <input type="checkbox" checked={f.isSelected} onChange={(e) => toggleSelection(e, f.id)} style={{position: 'absolute', top: 5, right: 5, cursor: 'pointer', zIndex: 10}} onClick={e => e.stopPropagation()} />
                   <button className={styles.deleteThumbBtn} onClick={(e) => handleDeleteFile(e, i)}>
                     <X size={14} />
                   </button>

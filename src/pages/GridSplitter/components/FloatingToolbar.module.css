@@ -33,6 +33,7 @@
 }
 
 .toolBtn.active {
-  background: var(--c1);
-  color: #000;
+  background: var(--tool-color, var(--c1));
+  color: #fff;
+  box-shadow: 0 0 10px var(--tool-color, var(--c1));
 }

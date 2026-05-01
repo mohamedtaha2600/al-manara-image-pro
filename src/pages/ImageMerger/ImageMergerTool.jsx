@@ -345,7 +345,7 @@ export default function ImageMergerTool() {
                   )}
                 </div>
 
-                <button className={`${styles.btn} ${styles.btnPrimary}`} onClick={handleDownload} style={{background: 'var(--c1)'}}>
+                <button className={`${styles.btn} ${styles.btnPrimary}`} onClick={handleDownload} style={{background: 'var(--c6)', color: '#000'}}>
                   <Download size={20} /> تحميل الصورة المدمجة
                 </button>
                 <button className={styles.btn} onClick={clearAll} style={{background: 'rgba(255,0,0,0.1)', color: '#ff4444'}}>
