@@ -55,8 +55,9 @@ export function useWatermarkCanvas({ canvasRef, img, watermark, settings, zoom, 
       };
 
       if (settings.isTiled) {
-        const stepX = settings.type === 'text' ? settings.fontSize * 4 : (watermark?.width || 100) * 2;
-        const stepY = settings.type === 'text' ? settings.fontSize * 3 : (watermark?.height || 100) * 2;
+        const gapMult = Math.max(0.1, settings.tileSpacing / 50);
+        const stepX = (settings.type === 'text' ? settings.fontSize * 4 : (watermark?.width || 100) * 2) * gapMult;
+        const stepY = (settings.type === 'text' ? settings.fontSize * 3 : (watermark?.height || 100) * 2) * gapMult;
         for (let y = 0; y < canvas.height + stepY; y += stepY) {
           for (let x = 0; x < canvas.width + stepX; x += stepX) {
             drawContent(x, y);

@@ -32,7 +32,8 @@ export default function WatermarkTool() {
     isDragging: false,
     showLogoWithText: false,
     logoScale: 30,
-    logoPos: 'above'
+    logoPos: 'above',
+    tileSpacing: 50
   });
 
   const [watermarkImg, setWatermarkImg] = useState(null);
@@ -255,8 +256,9 @@ export default function WatermarkTool() {
         };
 
         if (s.isTiled) {
-          const stepX = s.type === 'text' ? s.fontSize * 4 : (watermarkImg?.width || 100) * 2;
-          const stepY = s.type === 'text' ? s.fontSize * 3 : (watermarkImg?.height || 100) * 2;
+          const gapMult = Math.max(0.1, s.tileSpacing / 50);
+          const stepX = (s.type === 'text' ? s.fontSize * 4 : (watermarkImg?.width || 100) * 2) * gapMult;
+          const stepY = (s.type === 'text' ? s.fontSize * 3 : (watermarkImg?.height || 100) * 2) * gapMult;
           for (let ty = 0; ty < canvas.height + stepY; ty += stepY) {
             for (let tx = 0; tx < canvas.width + stepX; tx += stepX) {
               drawContent(tx, ty);
@@ -385,10 +387,19 @@ export default function WatermarkTool() {
                     onChange={e => setSettings(s => ({ ...s, rotation: parseInt(e.target.value) }))} />
           </div>
 
-          <button className={`${styles.tileBtn} ${settings.isTiled ? styles.tileActive : ''}`}
-                  onClick={() => setSettings(s => ({ ...s, isTiled: !s.isTiled }))}>
-            <Grid size={18} /> {settings.isTiled ? 'إيقاف التكرار' : 'تكرار (Tiling Mode)'}
-          </button>
+          <div style={{display: 'flex', flexDirection: 'column', gap: '10px'}}>
+            <button className={`${styles.tileBtn} ${settings.isTiled ? styles.tileActive : ''}`}
+                    onClick={() => setSettings(s => ({ ...s, isTiled: !s.isTiled }))}>
+              <Grid size={18} /> {settings.isTiled ? 'إيقاف التكرار' : 'تكرار (Tiling Mode)'}
+            </button>
+            {settings.isTiled && (
+              <div className={styles.inputGroup} style={{background: 'rgba(255,255,255,0.03)', padding: '10px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)'}}>
+                <div className={styles.labelSmall}>المسافة بين العلامات ({settings.tileSpacing}%)</div>
+                <input type="range" min="10" max="200" value={settings.tileSpacing}
+                       onChange={e => setSettings(s => ({ ...s, tileSpacing: parseInt(e.target.value) }))} />
+              </div>
+            )}
+          </div>
 
           <div style={{marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '10px'}}>
             <button className={styles.btnSecondary} onClick={handleApplyToAll} disabled={!activeFile || isProcessing}>
