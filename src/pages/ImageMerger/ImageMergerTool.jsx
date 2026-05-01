@@ -153,45 +153,61 @@ export default function ImageMergerTool() {
         });
       });
     } else if (layout === 'horizontal') {
-      const maxH = images.length > 0 ? Math.max(...images.map(img => img.originalH)) : 0;
-      totalH = maxH + padding * 2;
-      let currX = padding;
-      images.forEach(img => {
-        const yPos = padding + (totalH - padding * 2 - img.originalH) / 2;
-        items.push({ id: img.id, img: img.img, x: currX, y: yPos, w: img.originalW, h: img.originalH });
-        currX += img.originalW + padding;
+      totalW = canvasWidth;
+      totalH = canvasHeight;
+      const availableW = totalW - padding * 2;
+      const count = images.length;
+      const itemW = count > 0 ? (availableW - (count - 1) * padding) / count : 0;
+      
+      images.forEach((img, idx) => {
+        const x = padding + idx * (itemW + padding);
+        // Maintain aspect ratio while fitting height
+        const h = Math.min(totalH - padding * 2, itemW * (img.originalH / img.originalW));
+        const y = padding + (totalH - padding * 2 - h) / 2;
+        items.push({ id: img.id, img: img.img, x, y, w: itemW, h });
       });
-      totalW = images.length > 0 ? currX : 0;
     } else if (layout === 'vertical') {
-      const maxW = images.length > 0 ? Math.max(...images.map(img => img.originalW)) : 0;
-      totalW = maxW + padding * 2;
-      let currY = padding;
-      images.forEach(img => {
-        const xPos = padding + (totalW - padding * 2 - img.originalW) / 2;
-        items.push({ id: img.id, img: img.img, x: xPos, y: currY, w: img.originalW, h: img.originalH });
-        currY += img.originalH + padding;
+      totalW = canvasWidth;
+      totalH = canvasHeight;
+      const availableH = totalH - padding * 2;
+      const count = images.length;
+      const itemH = count > 0 ? (availableH - (count - 1) * padding) / count : 0;
+      
+      images.forEach((img, idx) => {
+        const y = padding + idx * (itemH + padding);
+        const w = Math.min(totalW - padding * 2, itemH * (img.originalW / img.originalH));
+        const x = padding + (totalW - padding * 2 - w) / 2;
+        items.push({ id: img.id, img: img.img, x, y, w, h: itemH });
       });
-      totalH = images.length > 0 ? currY : 0;
     } else if (layout === 'grid') {
+      totalW = canvasWidth;
+      totalH = canvasHeight;
       const cols = parseInt(gridCols) || 1;
       const rows = gridPreset === 'auto' ? Math.ceil(images.length / cols) : (parseInt(gridRows) || 1);
-      const cellW = images.length > 0 ? Math.max(...images.map(img => img.originalW)) : 0;
-      const cellH = images.length > 0 ? Math.max(...images.map(img => img.originalH)) : 0;
       
-      totalW = images.length > 0 ? cols * cellW + (cols - 1) * padding + padding * 2 : 0;
-      totalH = images.length > 0 ? rows * cellH + (rows - 1) * padding + padding * 2 : 0;
+      const availableW = totalW - padding * 2;
+      const availableH = totalH - padding * 2;
+      
+      const cellW = (availableW - (cols - 1) * padding) / cols;
+      const cellH = (availableH - (rows - 1) * padding) / rows;
       
       let drawnCount = 0;
       images.forEach((img, i) => {
         if (gridPreset !== 'auto' && drawnCount >= rows * cols) return;
 
-        const row = Math.floor(drawnCount / cols);
-        const col = drawnCount % cols;
-        const x = padding + col * (cellW + padding);
-        const y = padding + row * (cellH + padding);
-        const drawX = x + (cellW - img.originalW) / 2;
-        const drawY = y + (cellH - img.originalH) / 2;
-        items.push({ id: img.id, img: img.img, x: drawX, y: drawY, w: img.originalW, h: img.originalH });
+        const r = Math.floor(drawnCount / cols);
+        const c = drawnCount % cols;
+        const x = padding + c * (cellW + padding);
+        const y = padding + r * (cellH + padding);
+        
+        // Fit image in cell while maintaining ratio
+        const ratio = Math.min(cellW / img.originalW, cellH / img.originalH);
+        const w = img.originalW * ratio;
+        const h = img.originalH * ratio;
+        const drawX = x + (cellW - w) / 2;
+        const drawY = y + (cellH - h) / 2;
+        
+        items.push({ id: img.id, img: img.img, x: drawX, y: drawY, w, h });
         drawnCount++;
       });
     }
@@ -529,146 +545,174 @@ export default function ImageMergerTool() {
               <UploadCloud size={20} /> إضافة صور
             </button>
             
-            {images.length > 0 && (
-              <>
-                <div className={styles.sidebarSection}>
-                  <div className={styles.sectionTitle}>تخطيط الكولاج (Layout)</div>
+            <div className={styles.sidebarSection}>
+              <div className={styles.sectionTitle}>تخطيط الكولاج (Layout)</div>
+              <div className={styles.inputGroup}>
+                <select className={styles.select} value={layout} onChange={(e) => { setLayout(e.target.value); setTimeout(fitToScreen, 100); }}>
+                  <option value="horizontal">أفقي (جنباً لجنب)</option>
+                  <option value="vertical">عمودي (فوق بعض)</option>
+                  <option value="grid">تخطيط شبكي منظّم</option>
+                  <option value="free">حر (كولاج متقدم)</option>
+                </select>
+              </div>
+              
+              <div className={styles.inputGroup}>
+                <label>تفعيل ترقيم الصور</label>
+                <div style={{display: 'flex', gap: '10px'}}>
+                    <button 
+                      className={`${styles.btn} ${showNumbers ? styles.btnPrimary : ''}`} 
+                      onClick={() => setShowNumbers(true)}
+                      style={{padding: '5px 10px', fontSize: '0.8rem'}}
+                    >مفعّل</button>
+                    <button 
+                      className={`${styles.btn} ${!showNumbers ? styles.btnPrimary : ''}`} 
+                      onClick={() => setShowNumbers(false)}
+                      style={{padding: '5px 10px', fontSize: '0.8rem'}}
+                    >معطّل</button>
+                </div>
+              </div>
+
+              <div className={styles.inputGroup}>
+                <label>وحدة القياس</label>
+                <select className={styles.select} value={unit} onChange={(e) => setUnit(e.target.value)}>
+                  <option value="px">بيكسل (px)</option>
+                  <option value="cm">سنتيمتر (cm)</option>
+                </select>
+              </div>
+
+              <div className={styles.inputGroup}>
+                <label>اتجاه اللوحة (Orientation)</label>
+                <div style={{display: 'flex', gap: '10px'}}>
+                    <button 
+                      className={`${styles.btn} ${canvasWidth < canvasHeight ? styles.btnPrimary : ''}`} 
+                      onClick={() => {
+                        if (canvasWidth > canvasHeight) {
+                          const temp = canvasWidth;
+                          setCanvasWidth(canvasHeight);
+                          setCanvasHeight(temp);
+                        }
+                      }}
+                      style={{padding: '5px 10px', fontSize: '0.8rem'}}
+                    >طولي</button>
+                    <button 
+                      className={`${styles.btn} ${canvasWidth >= canvasHeight ? styles.btnPrimary : ''}`} 
+                      onClick={() => {
+                        if (canvasWidth < canvasHeight) {
+                          const temp = canvasWidth;
+                          setCanvasWidth(canvasHeight);
+                          setCanvasHeight(temp);
+                        }
+                      }}
+                      style={{padding: '5px 10px', fontSize: '0.8rem'}}
+                    >عرضي</button>
+                </div>
+              </div>
+            </div>
+
+            <div className={styles.sidebarSection}>
+              <div className={styles.sectionTitle}>إعدادات لوحة العمل (Canvas)</div>
+              
+              {layout === 'grid' && (
+                <>
                   <div className={styles.inputGroup}>
-                    <select className={styles.select} value={layout} onChange={(e) => { setLayout(e.target.value); setTimeout(fitToScreen, 100); }}>
-                      <option value="horizontal">أفقي (جنباً لجنب)</option>
-                      <option value="vertical">عمودي (فوق بعض)</option>
-                      <option value="grid">تخطيط شبكي منظّم</option>
-                      <option value="free">حر (كولاج متقدم)</option>
+                    <label>نوع الشبكة (Grid Type)</label>
+                    <select className={styles.select} value={gridPreset} onChange={(e) => {
+                      const val = e.target.value;
+                      setGridPreset(val);
+                      if (val !== 'auto' && val !== 'custom') {
+                        const [c, r] = val.split('x');
+                        setGridCols(parseInt(c));
+                        setGridRows(parseInt(r));
+                      }
+                      setTimeout(fitToScreen, 100);
+                    }}>
+                      <option value="auto">تلقائي (حسب عدد الصور)</option>
+                      <option value="custom">مخصص (صفوف وأعمدة)</option>
+                      <option value="2x2">2 × 2</option>
+                      <option value="3x3">3 × 3</option>
+                      <option value="4x4">4 × 4</option>
+                      <option value="2x3">2 عمود × 3 صفوف</option>
+                      <option value="3x2">3 أعمدة × 2 صفوف</option>
                     </select>
                   </div>
-                  
-                  {layout === 'grid' && (
-                    <>
-                      <div className={styles.inputGroup}>
-                        <label>نوع الشبكة (Grid Type)</label>
-                        <select className={styles.select} value={gridPreset} onChange={(e) => {
-                          const val = e.target.value;
-                          setGridPreset(val);
-                          if (val !== 'auto' && val !== 'custom') {
-                            const [c, r] = val.split('x');
-                            setGridCols(parseInt(c));
-                            setGridRows(parseInt(r));
-                          }
-                          setTimeout(fitToScreen, 100);
-                        }}>
-                          <option value="auto">تلقائي (حسب عدد الصور)</option>
-                          <option value="custom">مخصص (صفوف وأعمدة)</option>
-                          <option value="2x2">2 × 2 (4 صور)</option>
-                          <option value="3x3">3 × 3 (9 صور)</option>
-                          <option value="4x4">4 × 4 (16 صورة)</option>
-                          <option value="2x3">2 عمود × 3 صفوف</option>
-                          <option value="3x2">3 أعمدة × 2 صفوف</option>
-                        </select>
-                      </div>
 
-                      <div className={styles.inputGroup} style={{flexDirection: 'row', gap: '10px'}}>
-                        <div style={{flex: 1}}>
-                          <label>عدد الأعمدة</label>
-                          <input type="number" className={styles.input} value={gridCols} onChange={(e) => {
-                             setGridCols(Math.max(1, parseInt(e.target.value) || 1));
-                             if (gridPreset !== 'auto') setGridPreset('custom');
-                          }} min="1"/>
-                        </div>
-                        {gridPreset !== 'auto' && (
-                          <div style={{flex: 1}}>
-                            <label>عدد الصفوف</label>
-                            <input type="number" className={styles.input} value={gridRows} onChange={(e) => {
-                               setGridRows(Math.max(1, parseInt(e.target.value) || 1));
-                               setGridPreset('custom');
-                            }} min="1"/>
-                          </div>
-                        )}
+                  <div className={styles.inputGroup} style={{flexDirection: 'row', gap: '10px'}}>
+                    <div style={{flex: 1}}>
+                      <label>الأعمدة</label>
+                      <input type="number" className={styles.input} value={gridCols} onChange={(e) => {
+                         setGridCols(Math.max(1, parseInt(e.target.value) || 1));
+                         if (gridPreset !== 'auto') setGridPreset('custom');
+                      }} min="1"/>
+                    </div>
+                    {gridPreset !== 'auto' && (
+                      <div style={{flex: 1}}>
+                        <label>الصفوف</label>
+                        <input type="number" className={styles.input} value={gridRows} onChange={(e) => {
+                           setGridRows(Math.max(1, parseInt(e.target.value) || 1));
+                           setGridPreset('custom');
+                        }} min="1"/>
                       </div>
-                    </>
-                  )}
+                    )}
+                  </div>
+                </>
+              )}
 
-                  {layout === 'free' && (
-                    <>
-                      <div className={styles.inputGroup}>
-                        <label>وحدة القياس</label>
-                        <select className={styles.select} value={unit} onChange={(e) => {
-                          const newUnit = e.target.value;
-                          setUnit(newUnit);
-                        }}>
-                          <option value="px">بيكسل (px)</option>
-                          <option value="cm">سنتيمتر (cm)</option>
-                        </select>
-                      </div>
-                      <div className={styles.inputGroup}>
-                        <label>تفعيل ترقيم الصور</label>
-                        <div style={{display: 'flex', gap: '10px'}}>
-                           <button 
-                             className={`${styles.btn} ${showNumbers ? styles.btnPrimary : ''}`} 
-                             onClick={() => setShowNumbers(true)}
-                             style={{padding: '5px 10px', fontSize: '0.8rem'}}
-                           >مفعّل</button>
-                           <button 
-                             className={`${styles.btn} ${!showNumbers ? styles.btnPrimary : ''}`} 
-                             onClick={() => setShowNumbers(false)}
-                             style={{padding: '5px 10px', fontSize: '0.8rem'}}
-                           >معطّل</button>
-                        </div>
-                      </div>
-                      <div className={styles.inputGroup}>
-                        <label>مقاسات جاهزة (لوحة العمل)</label>
-                        <select className={styles.select} value={presetId} onChange={handlePresetChange}>
-                          {PRESETS.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                        </select>
-                      </div>
-                      <div className={styles.inputGroup} style={{flexDirection: 'row', gap: '10px'}}>
-                        <div style={{flex: 1}}>
-                          <label>العرض ({unit})</label>
-                          <input type="number" className={styles.input} value={toDisplayValue(canvasWidth)} onChange={(e) => {
-                             setCanvasWidth(fromDisplayValue(parseFloat(e.target.value) || 0));
-                             setPresetId('custom');
-                          }} />
-                        </div>
-                        <div style={{flex: 1}}>
-                          <label>الارتفاع ({unit})</label>
-                          <input type="number" className={styles.input} value={toDisplayValue(canvasHeight)} onChange={(e) => {
-                             setCanvasHeight(fromDisplayValue(parseFloat(e.target.value) || 0));
-                             setPresetId('custom');
-                          }} />
-                        </div>
-                      </div>
-                    </>
-                  )}
+              <div className={styles.inputGroup}>
+                <label>مقاسات جاهزة</label>
+                <select className={styles.select} value={presetId} onChange={handlePresetChange}>
+                  {PRESETS.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+              </div>
+              
+              <div className={styles.inputGroup} style={{flexDirection: 'row', gap: '10px'}}>
+                <div style={{flex: 1}}>
+                  <label>العرض ({unit})</label>
+                  <input type="number" className={styles.input} value={toDisplayValue(canvasWidth)} onChange={(e) => {
+                      setCanvasWidth(fromDisplayValue(parseFloat(e.target.value) || 0));
+                      setPresetId('custom');
+                  }} />
                 </div>
+                <div style={{flex: 1}}>
+                  <label>الارتفاع ({unit})</label>
+                  <input type="number" className={styles.input} value={toDisplayValue(canvasHeight)} onChange={(e) => {
+                      setCanvasHeight(fromDisplayValue(parseFloat(e.target.value) || 0));
+                      setPresetId('custom');
+                  }} />
+                </div>
+              </div>
+            </div>
 
-                {layout !== 'free' && (
-                  <div className={styles.sidebarSection}>
-                    <div className={styles.sectionTitle}>المسافات والخلفية</div>
-                    <div className={styles.inputGroup}>
-                      <label>المسافة بين الصور: {padding}px</label>
-                      <input type="range" className={styles.rangeInput} min="0" max="200" value={padding} onChange={(e) => setPadding(parseInt(e.target.value))} />
-                    </div>
-                    <div className={styles.inputGroup}>
-                      <label>لون الخلفية</label>
-                      <div className={styles.colorPickerWrap}>
-                        <input type="color" className={styles.colorPicker} value={bgColor} onChange={(e) => setBgColor(e.target.value)} />
-                        <span style={{color: 'var(--text-dim)', fontSize: '0.85rem'}}>{bgColor}</span>
-                      </div>
-                    </div>
+            {layout !== 'free' && (
+              <div className={styles.sidebarSection}>
+                <div className={styles.sectionTitle}>المسافات والخلفية</div>
+                <div className={styles.inputGroup}>
+                  <label>المسافة بين الصور: {padding}px</label>
+                  <input type="range" className={styles.rangeInput} min="0" max="200" value={padding} onChange={(e) => setPadding(parseInt(e.target.value))} />
+                </div>
+                <div className={styles.inputGroup}>
+                  <label>لون الخلفية</label>
+                  <div className={styles.colorPickerWrap}>
+                    <input type="color" className={styles.colorPicker} value={bgColor} onChange={(e) => setBgColor(e.target.value)} />
+                    <span style={{color: 'var(--text-dim)', fontSize: '0.85rem'}}>{bgColor}</span>
                   </div>
-                )}
-                
-                {layout === 'free' && (
-                  <div className={styles.sidebarSection}>
-                    <div className={styles.sectionTitle}>خلفية لوحة العمل</div>
-                    <div className={styles.inputGroup}>
-                      <div className={styles.colorPickerWrap}>
-                        <input type="color" className={styles.colorPicker} value={bgColor} onChange={(e) => setBgColor(e.target.value)} />
-                        <span style={{color: 'var(--text-dim)', fontSize: '0.85rem'}}>{bgColor}</span>
-                      </div>
-                    </div>
+                </div>
+              </div>
+            )}
+            
+            {layout === 'free' && (
+              <div className={styles.sidebarSection}>
+                <div className={styles.sectionTitle}>خلفية لوحة العمل</div>
+                <div className={styles.inputGroup}>
+                  <div className={styles.colorPickerWrap}>
+                    <input type="color" className={styles.colorPicker} value={bgColor} onChange={(e) => setBgColor(e.target.value)} />
+                    <span style={{color: 'var(--text-dim)', fontSize: '0.85rem'}}>{bgColor}</span>
                   </div>
-                )}
+                </div>
+              </div>
+            )}
 
+            {images.length > 0 && (
+              <>
                 {layout === 'free' && activeImgId && (
                   <div className={styles.sidebarSection} style={{borderColor: 'var(--c6)'}}>
                     <div className={styles.sectionTitle} style={{color: 'var(--c6)'}}><Settings size={16} /> تحكم الصورة المحددة</div>
@@ -722,16 +766,22 @@ export default function ImageMergerTool() {
           onWheel={handleWheel}
           style={{ cursor: spacePressed ? 'grab' : (dragState ? 'grabbing' : 'default') }}
         >
-          {images.length > 0 ? (
-            <div className={styles.canvasWrapper} style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})` }}>
-              <canvas ref={canvasRef} className={styles.canvas} />
-            </div>
-          ) : (
-            <div className={styles.emptyState}>
-              <Layers size={64} className={styles.emptyStateIcon} />
-              <h2>اسحب وأفلت الصور هنا لإنشاء الكولاج</h2>
-            </div>
-          )}
+          <div className={styles.canvasWrapper} style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})` }}>
+            <canvas ref={canvasRef} className={styles.canvas} />
+            {images.length === 0 && (
+              <div 
+                style={{ 
+                  position: 'absolute', 
+                  top: 0, left: 0, right: 0, bottom: 0, 
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                  color: 'rgba(255,255,255,0.2)', pointerEvents: 'none'
+                }}
+              >
+                <Layers size={64} style={{marginBottom: '10px'}} />
+                <p>لوحة العمل جاهزة.. ابدأ بإضافة الصور</p>
+              </div>
+            )}
+          </div>
 
           {images.length > 0 && (
             <FloatingToolbar 

@@ -9,14 +9,14 @@
 }
 
 .mainLayout {
-  display: grid;
-  grid-template-columns: 300px 1fr;
+  display: flex;
   flex: 1;
   overflow: hidden;
 }
 
 /* Sidebar */
 .sidebar {
+  width: 300px;
   padding: 20px;
   border-left: 1px solid var(--border);
   display: flex;
@@ -24,6 +24,11 @@
   gap: 15px;
   background: rgba(255, 255, 255, 0.01);
   overflow-y: auto;
+  direction: ltr;
+}
+
+.sidebar > * {
+  direction: rtl;
 }
 
 .toolTitle {
@@ -599,6 +604,38 @@
   border-radius: 30px;
   font-weight: 800;
   cursor: pointer;
+}
+
+.dropzone {
+  flex: 1;
+  margin: 30px;
+  border: 2px dashed var(--border);
+  border-radius: 25px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  background: rgba(255, 255, 255, 0.01);
+  transition: 0.3s;
+  cursor: pointer;
+}
+
+.dropzone:hover {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: var(--c2);
+}
+
+.dropzone h3 {
+  margin: 0;
+  font-size: 1.5rem;
+  color: #fff;
+}
+
+.dropzone p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--text-dim);
 }
 
 .btnMain {

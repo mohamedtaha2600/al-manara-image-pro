@@ -183,7 +183,7 @@ export default function ImageCompressorTool() {
     : 0;
 
   return (
-    <div className={styles.container} onDragOver={handleDragOver} onDragLeave={() => setIsDragging(false)} onDrop={handleDrop}>
+    <div className={styles.container} style={{height: 'calc(100vh - 64px)'}} onDragOver={handleDragOver} onDragLeave={() => setIsDragging(false)} onDrop={handleDrop}>
       {isDragging && (
         <div className={styles.dragOverlay}>
           <Upload size={80} color="var(--c2)" />
@@ -303,14 +303,10 @@ export default function ImageCompressorTool() {
 
         <div className={styles.previewArea}>
           {images.length === 0 ? (
-            <div className={styles.emptyState}>
-              <ImageIcon size={64} color="var(--c2)" />
-              <h3>اسحب الصور هنا للبدء</h3>
-              <div className={styles.uploadOptions}>
-                <button className={styles.uploadBtnBig} onClick={() => document.getElementById('fileInput').click()}>
-                  <Plus size={20} /> اختيار صور
-                </button>
-              </div>
+            <div className={styles.dropzone} onClick={() => document.getElementById('fileInput').click()}>
+              <Upload size={64} color="var(--c2)" />
+              <h3>اسحب الصور هنا أو انقر للرفع</h3>
+              <p>بدء ضغط الصور بلمسة واحدة احترافية</p>
             </div>
           ) : (
             <>
