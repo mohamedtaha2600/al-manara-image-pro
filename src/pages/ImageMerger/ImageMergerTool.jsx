@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import styles from './ImageMerger.module.css';
 import { Layers, UploadCloud, X, Download, Maximize, ZoomIn, ZoomOut, Move, Settings, Type } from 'lucide-react';
+import FloatingToolbar from '../GridSplitter/components/FloatingToolbar';
 
 const CM_TO_PX = 37.7952755906;
 
@@ -47,7 +48,10 @@ export default function ImageMergerTool() {
   // Canvas interaction state
   const [activeImgId, setActiveImgId] = useState(null);
   const [dragState, setDragState] = useState(null);
+  const [activeHandle, setActiveHandle] = useState(null); // 'tl', 'tr', 'bl', 'br', 'r' (rotate)
   const [spacePressed, setSpacePressed] = useState(false);
+  const [showNumbers, setShowNumbers] = useState(true);
+  const [activeTool, setActiveTool] = useState('select'); // select, pan, crop
 
   useEffect(() => {
     const down = (e) => { if (e.code === 'Space') { e.preventDefault(); setSpacePressed(true); } };
@@ -208,26 +212,72 @@ export default function ImageMergerTool() {
     canvas.width = totalW;
     canvas.height = totalH;
 
-    ctx.fillStyle = bgColor;
-    ctx.fillRect(0, 0, totalW, totalH);
+    const isInteracting = dragState || activeHandle;
+    
+    // Dim background if interacting or in crop mode
+    if (isInteracting || activeTool === 'crop') {
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+      ctx.fillRect(0, 0, totalW, totalH);
+    }
 
-    items.forEach(item => {
-      let x = item.x, y = item.y;
+    items.forEach((item, idx) => {
+      let x = item.x, y = item.y, w = item.w, h = item.h;
+      
       // If dragging, use drag coordinates
       if (dragState && dragState.id === item.id) {
         x = dragState.currentX;
         y = dragState.currentY;
       }
-      ctx.drawImage(item.img, x, y, item.w, item.h);
+
+      // If this is the active image and we are interacting, draw it "above" the dimming
+      if (isInteracting && item.id === activeImgId) {
+        // Clear its area or just draw it normally (it will be drawn over the dimming)
+        ctx.save();
+        ctx.shadowBlur = 20;
+        ctx.shadowColor = 'rgba(0,0,0,0.5)';
+        ctx.drawImage(item.img, x, y, w, h);
+        ctx.restore();
+      } else {
+        ctx.drawImage(item.img, x, y, w, h);
+      }
       
-      // Draw selection border if active
+      // Draw Numbers
+      if (showNumbers) {
+        ctx.save();
+        const fontSize = Math.max(20, Math.min(w, h) * 0.15);
+        ctx.font = `bold ${fontSize}px sans-serif`;
+        ctx.fillStyle = 'white';
+        ctx.strokeStyle = 'black';
+        ctx.lineWidth = fontSize * 0.1;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        const numText = (idx + 1).toString();
+        ctx.strokeText(numText, x + w/2, y + h/2);
+        ctx.fillText(numText, x + w/2, y + h/2);
+        ctx.restore();
+      }
+      
+      // Draw selection border and handles if active
       if (item.id === activeImgId) {
+        ctx.save();
         ctx.strokeStyle = '#ffd600';
-        ctx.lineWidth = 4 / zoom;
-        ctx.strokeRect(x, y, item.w, item.h);
+        ctx.lineWidth = 2 / zoom;
+        ctx.setLineDash([5 / zoom, 5 / zoom]);
+        ctx.strokeRect(x, y, w, h);
+        
+        // Draw Handles (Corners)
+        const hs = 8 / zoom; // handle size
+        ctx.fillStyle = '#ffd600';
+        ctx.setLineDash([]);
+        ctx.fillRect(x - hs, y - hs, hs * 2, hs * 2); // TL
+        ctx.fillRect(x + w - hs, y - hs, hs * 2, hs * 2); // TR
+        ctx.fillRect(x - hs, y + h - hs, hs * 2, hs * 2); // BL
+        ctx.fillRect(x + w - hs, y + h - hs, hs * 2, hs * 2); // BR
+        
+        ctx.restore();
       }
     });
-  }, [getLayoutData, bgColor, dragState, activeImgId, zoom]);
+  }, [getLayoutData, bgColor, dragState, activeImgId, zoom, showNumbers, activeTool, activeHandle]);
 
   useEffect(() => {
     let animationFrameId;
@@ -274,6 +324,20 @@ export default function ImageMergerTool() {
     const { x, y } = getCanvasCoords(e);
     const { items } = getLayoutData();
     
+    // Check handles first if an image is active
+    if (activeImgId) {
+      const activeItem = items.find(i => i.id === activeImgId);
+      if (activeItem) {
+        const hs = 10 / zoom;
+        const { x: ax, y: ay, w: aw, h: ah } = activeItem;
+        
+        if (Math.abs(x - ax) < hs && Math.abs(y - ay) < hs) { setActiveHandle('tl'); return; }
+        if (Math.abs(x - (ax + aw)) < hs && Math.abs(y - ay) < hs) { setActiveHandle('tr'); return; }
+        if (Math.abs(x - ax) < hs && Math.abs(y - (ay + ah)) < hs) { setActiveHandle('bl'); return; }
+        if (Math.abs(x - (ax + aw)) < hs && Math.abs(y - (ay + ah)) < hs) { setActiveHandle('br'); return; }
+      }
+    }
+
     for (let i = items.length - 1; i >= 0; i--) {
       const item = items[i];
       if (x >= item.x && x <= item.x + item.w && y >= item.y && y <= item.y + item.h) {
@@ -298,8 +362,45 @@ export default function ImageMergerTool() {
       setPan({ x: e.clientX - panStart.x, y: e.clientY - panStart.y });
       return;
     }
+
+    const { x, y } = getCanvasCoords(e);
+
+    if (activeHandle && activeImgId) {
+      const activeImg = images.find(i => i.id === activeImgId);
+      if (!activeImg) return;
+
+      setImages(prev => prev.map(img => {
+        if (img.id !== activeImgId) return img;
+        let newW = img.freeW, newH = img.freeH, newX = img.freeX, newY = img.freeY;
+        
+        if (activeHandle === 'br') {
+          newW = Math.max(20, x - img.freeX);
+          newH = Math.max(20, y - img.freeY);
+        } else if (activeHandle === 'tl') {
+          const dx = x - img.freeX;
+          const dy = y - img.freeY;
+          newX = x;
+          newY = y;
+          newW = Math.max(20, img.freeW - dx);
+          newH = Math.max(20, img.freeH - dy);
+        } else if (activeHandle === 'tr') {
+          newW = Math.max(20, x - img.freeX);
+          const dy = y - img.freeY;
+          newY = y;
+          newH = Math.max(20, img.freeH - dy);
+        } else if (activeHandle === 'bl') {
+          const dx = x - img.freeX;
+          newX = x;
+          newW = Math.max(20, img.freeW - dx);
+          newH = Math.max(20, y - img.freeY);
+        }
+        
+        return { ...img, freeW: newW, freeH: newH, freeX: newX, freeY: newY };
+      }));
+      return;
+    }
+
     if (dragState) {
-      const { x, y } = getCanvasCoords(e);
       const dx = x - dragState.mouseStartX;
       const dy = y - dragState.mouseStartY;
       let newX = dragState.imgStartX + dx;
@@ -353,6 +454,7 @@ export default function ImageMergerTool() {
 
   const handleMouseUp = (e) => {
     setIsPanning(false);
+    setActiveHandle(null);
     if (dragState && layout !== 'free') {
       const { x, y } = getCanvasCoords(e);
       const { items } = getLayoutData();
@@ -498,6 +600,21 @@ export default function ImageMergerTool() {
                         </select>
                       </div>
                       <div className={styles.inputGroup}>
+                        <label>تفعيل ترقيم الصور</label>
+                        <div style={{display: 'flex', gap: '10px'}}>
+                           <button 
+                             className={`${styles.btn} ${showNumbers ? styles.btnPrimary : ''}`} 
+                             onClick={() => setShowNumbers(true)}
+                             style={{padding: '5px 10px', fontSize: '0.8rem'}}
+                           >مفعّل</button>
+                           <button 
+                             className={`${styles.btn} ${!showNumbers ? styles.btnPrimary : ''}`} 
+                             onClick={() => setShowNumbers(false)}
+                             style={{padding: '5px 10px', fontSize: '0.8rem'}}
+                           >معطّل</button>
+                        </div>
+                      </div>
+                      <div className={styles.inputGroup}>
                         <label>مقاسات جاهزة (لوحة العمل)</label>
                         <select className={styles.select} value={presetId} onChange={handlePresetChange}>
                           {PRESETS.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -617,12 +734,13 @@ export default function ImageMergerTool() {
           )}
 
           {images.length > 0 && (
-            <div className={styles.toolbar}>
-              <button className={styles.toolBtn} onClick={(e) => { e.stopPropagation(); setZoom(z => z * 1.1); }} title="تكبير"><ZoomIn size={20} /></button>
-              <button className={styles.toolBtn} onClick={(e) => { e.stopPropagation(); setZoom(z => z * 0.9); }} title="تصغير"><ZoomOut size={20} /></button>
-              <button className={styles.toolBtn} onClick={(e) => { e.stopPropagation(); fitToScreen(); }} title="ملاءمة الشاشة"><Maximize size={20} /></button>
-              <button className={styles.toolBtn} onClick={(e) => { e.stopPropagation(); setPan({x:0, y:0}); setZoom(1); }} title="الحجم الأصلي"><Move size={20} /></button>
-            </div>
+            <FloatingToolbar 
+              activeTool={activeTool}
+              setActiveTool={setActiveTool}
+              fitToScreen={fitToScreen}
+              simpleMode={true}
+              color="var(--c6)"
+            />
           )}
         </div>
 
