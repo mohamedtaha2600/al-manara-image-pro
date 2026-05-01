@@ -247,43 +247,7 @@ export default function ImageMergerTool() {
       {statusMsg && <div className={styles.statusOverlay}>{statusMsg}</div>}
       
       <div className={styles.mainLayout}>
-        {/* Main Preview Area */}
-        <div 
-          className={styles.previewArea} 
-          ref={previewAreaRef}
-          onDragOver={onDragOver}
-          onDragLeave={onDragLeave}
-          onDrop={onDrop}
-          onMouseDown={handleMouseDown}
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUp}
-          onMouseLeave={handleMouseUp}
-          onWheel={handleWheel}
-          style={{ cursor: isPanning ? 'grabbing' : 'grab' }}
-        >
-          {images.length > 0 ? (
-            <div className={styles.canvasWrapper} style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})` }}>
-              <canvas ref={canvasRef} className={styles.canvas} />
-            </div>
-          ) : (
-            <div className={styles.emptyState}>
-              <Layers size={64} className={styles.emptyStateIcon} />
-              <h2>اسحب وأفلت الصور هنا</h2>
-              <p>أو استخدم زر الرفع من القائمة الجانبية</p>
-            </div>
-          )}
-
-          {images.length > 0 && (
-            <div className={styles.toolbar}>
-              <button className={styles.toolBtn} onClick={(e) => { e.stopPropagation(); setZoom(z => z * 1.1); }} title="تكبير"><ZoomIn size={20} /></button>
-              <button className={styles.toolBtn} onClick={(e) => { e.stopPropagation(); setZoom(z => z * 0.9); }} title="تصغير"><ZoomOut size={20} /></button>
-              <button className={styles.toolBtn} onClick={(e) => { e.stopPropagation(); fitToScreen(); }} title="ملاءمة الشاشة"><Maximize size={20} /></button>
-              <button className={styles.toolBtn} onClick={(e) => { e.stopPropagation(); setPan({x:0, y:0}); setZoom(1); }} title="الحجم الأصلي"><Move size={20} /></button>
-            </div>
-          )}
-        </div>
-
-        {/* Sidebar */}
+        {/* Sidebar (Renders on Right in RTL) */}
         <div className={styles.sidebar}>
           <div className={styles.sidebarHeader}>
             <div className={styles.sidebarTitle}>
@@ -391,29 +355,65 @@ export default function ImageMergerTool() {
             )}
           </div>
         </div>
-      </div>
 
-      {/* Image List Area (Bottom) */}
-      {images.length > 0 && (
-        <div className={styles.imageListArea}>
-          {images.map((img, idx) => (
-            <div 
-              key={img.id} 
-              className={`${styles.imageItem} ${draggedIdx === idx ? styles.active : ''}`}
-              draggable
-              onDragStart={(e) => handleDragStartItem(e, idx)}
-              onDragOver={(e) => handleDragOverItem(e, idx)}
-              onDragEnd={handleDragEndItem}
-              title="اسحب لإعادة الترتيب"
-            >
-              <img src={img.url} alt={`Image ${idx}`} />
-              <button className={styles.deleteBtn} onClick={() => removeImage(img.id)} title="حذف">
-                <X size={14} />
-              </button>
+        {/* Main Preview Area (Renders in Middle in RTL) */}
+        <div 
+          className={styles.previewArea} 
+          ref={previewAreaRef}
+          onDragOver={onDragOver}
+          onDragLeave={onDragLeave}
+          onDrop={onDrop}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseUp}
+          onWheel={handleWheel}
+          style={{ cursor: isPanning ? 'grabbing' : 'grab' }}
+        >
+          {images.length > 0 ? (
+            <div className={styles.canvasWrapper} style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})` }}>
+              <canvas ref={canvasRef} className={styles.canvas} />
             </div>
-          ))}
+          ) : (
+            <div className={styles.emptyState}>
+              <Layers size={64} className={styles.emptyStateIcon} />
+              <h2>اسحب وأفلت الصور هنا</h2>
+              <p>أو استخدم زر الرفع من القائمة الجانبية</p>
+            </div>
+          )}
+
+          {images.length > 0 && (
+            <div className={styles.toolbar}>
+              <button className={styles.toolBtn} onClick={(e) => { e.stopPropagation(); setZoom(z => z * 1.1); }} title="تكبير"><ZoomIn size={20} /></button>
+              <button className={styles.toolBtn} onClick={(e) => { e.stopPropagation(); setZoom(z => z * 0.9); }} title="تصغير"><ZoomOut size={20} /></button>
+              <button className={styles.toolBtn} onClick={(e) => { e.stopPropagation(); fitToScreen(); }} title="ملاءمة الشاشة"><Maximize size={20} /></button>
+              <button className={styles.toolBtn} onClick={(e) => { e.stopPropagation(); setPan({x:0, y:0}); setZoom(1); }} title="الحجم الأصلي"><Move size={20} /></button>
+            </div>
+          )}
         </div>
-      )}
+
+        {/* Image List Area (Vertical Strip, Renders on Left in RTL) */}
+        {images.length > 0 && (
+          <div className={styles.imageListArea}>
+            {images.map((img, idx) => (
+              <div 
+                key={img.id} 
+                className={`${styles.imageItem} ${draggedIdx === idx ? styles.active : ''}`}
+                draggable
+                onDragStart={(e) => handleDragStartItem(e, idx)}
+                onDragOver={(e) => handleDragOverItem(e, idx)}
+                onDragEnd={handleDragEndItem}
+                title="اسحب لإعادة الترتيب"
+              >
+                <img src={img.url} alt={`Image ${idx}`} />
+                <button className={styles.deleteBtn} onClick={() => removeImage(img.id)} title="حذف">
+                  <X size={14} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

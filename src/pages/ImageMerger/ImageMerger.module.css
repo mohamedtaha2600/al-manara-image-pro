@@ -138,14 +138,15 @@
 }
 
 .imageListArea {
-  height: 140px;
+  width: 140px;
   background: rgba(10, 10, 15, 0.8);
-  border-top: 1px solid var(--border);
+  border-right: 1px solid var(--border);
   display: flex;
+  flex-direction: column;
   align-items: center;
-  padding: 10px 20px;
+  padding: 20px 10px;
   gap: 15px;
-  overflow-x: auto;
+  overflow-y: auto;
   backdrop-filter: blur(10px);
 }
 
@@ -252,7 +253,6 @@
 /* Scrollbar for sidebar and imagelist */
 .sidebarContent::-webkit-scrollbar, .imageListArea::-webkit-scrollbar {
   width: 6px;
-  height: 6px;
 }
 .sidebarContent::-webkit-scrollbar-track, .imageListArea::-webkit-scrollbar-track {
   background: transparent;
