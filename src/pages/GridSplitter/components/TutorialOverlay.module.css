@@ -1,0 +1,143 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(8px);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.3s ease;
+}
+
+.bubble {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 24px;
+  width: 450px;
+  padding: 40px;
+  position: relative;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+  text-align: center;
+  color: white;
+}
+
+:global([data-theme='light']) .bubble {
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  color: #07070f;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.1);
+}
+
+.closeBtn {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  padding: 5px;
+  border-radius: 50%;
+  transition: 0.2s;
+}
+.closeBtn:hover {
+  background: rgba(255,255,255,0.1);
+  color: white;
+}
+
+.iconBox {
+  margin-bottom: 25px;
+  display: inline-flex;
+  padding: 20px;
+  background: rgba(255,255,255,0.03);
+  border-radius: 20px;
+}
+
+.title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 15px;
+}
+
+.text {
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--text-dim);
+  margin-bottom: 30px;
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.dots {
+  display: flex;
+  gap: 6px;
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.2);
+}
+
+.activeDot {
+  background: var(--c1);
+  width: 15px;
+  border-radius: 3px;
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+}
+
+.nextBtn, .prevBtn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 12px;
+  font-family: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.nextBtn {
+  background: var(--c1);
+  color: #07070f;
+  border: none;
+}
+.nextBtn:hover {
+  filter: brightness(1.1);
+  transform: translateY(-2px);
+}
+
+.prevBtn {
+  background: transparent;
+  color: white;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+:global([data-theme='light']) .prevBtn {
+  color: #07070f;
+  border: 1px solid rgba(0,0,0,0.1);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@media (max-width: 500px) {
+  .bubble {
+    width: 90%;
+    padding: 25px;
+  }
+}

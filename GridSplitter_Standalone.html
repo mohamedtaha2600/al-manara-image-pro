@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>أداة قص الصور الاحترافية - Standalone</title>
+    
+    <!-- Dependencies -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/jszip@3.10.1/dist/jszip.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg: #0a0a0c;
+            --surface: #111114;
+            --surface2: #16161a;
+            --border: #222226;
+            --text: #ffffff;
+            --text-dim: #a0a0a5;
+            --c1: #00e676; /* Emerald */
+            --c2: #00e5ff; /* Cyan */
+            --c3: #ffea00; /* Yellow */
+            --c7: #3d5afe; /* Indigo */
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Cairo', sans-serif;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        /* Layout */
+        .app-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        .main-layout {
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* Sidebar Styles */
+        .sidebar {
+            background: var(--surface2);
+            border-left: 1px solid var(--border);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            overflow-y: auto;
+        }
+
+        .upload-area {
+            border: 2px dashed var(--border);
+            border-radius: 12px;
+            padding: 30px 15px;
+            text-align: center;
+            cursor: pointer;
+            background: rgba(255,255,255,0.02);
+            transition: 0.3s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+
+        .upload-area:hover {
+            border-color: var(--c1);
+            background: rgba(0, 230, 118, 0.05);
+        }
+
+        .section-title {
+            font-size: 0.7rem;
+            color: var(--c1);
+            text-transform: uppercase;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .presets {
+            display: flex;
+            gap: 8px;
+        }
+
+        .preset-btn {
+            flex: 1;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--border);
+            color: var(--text-dim);
+            padding: 6px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            cursor: pointer;
+        }
+
+        .preset-btn:hover {
+            background: rgba(0,230,118,0.1);
+            border-color: var(--c1);
+            color: #fff;
+        }
+
+        .row-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .input-group {
+            background: rgba(255,255,255,0.03);
+            padding: 10px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+        }
+
+        .input-group label {
+            display: block;
+            font-size: 0.7rem;
+            color: var(--text-dim);
+        }
+
+        .input-field {
+            background: transparent;
+            border: none;
+            color: white;
+            width: 100%;
+            outline: none;
+            font-weight: bold;
+            font-size: 0.9rem;
+            margin-top: 4px;
+        }
+
+        .btn-main {
+            background: var(--c1);
+            color: #000;
+            border: none;
+            padding: 15px;
+            border-radius: 10px;
+            font-weight: 800;
+            cursor: pointer;
+            transition: 0.2s;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-main:hover:not(:disabled) {
+            transform: translateY(-2px);
+            filter: brightness(1.1);
+        }
+
+        .btn-secondary {
+            background: #1a1a1d;
+            color: #fff;
+            border: 1px solid #333;
+            padding: 12px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        /* Preview Area */
+        .preview-area {
+            position: relative;
+            background: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            background-image: radial-gradient(#222 1px, transparent 1px);
+            background-size: 20px 20px;
+            touch-action: none;
+        }
+
+        .canvas-wrapper {
+            will-change: transform;
+            transform-origin: center;
+        }
+
+        .main-canvas {
+            box-shadow: 0 0 50px rgba(0,0,0,0.8);
+        }
+
+        /* Floating Toolbar */
+        .floating-toolbar {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(10, 10, 12, 0.8);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 8px;
+            border-radius: 16px;
+            display: flex;
+            gap: 8px;
+            z-index: 100;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+        }
+
+        .tool-btn {
+            width: 42px;
+            height: 42px;
+            border-radius: 12px;
+            border: 1px solid transparent;
+            background: transparent;
+            color: var(--text-dim);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: 0.3s;
+        }
+
+        .tool-btn:hover {
+            background: rgba(255,255,255,0.05);
+            color: #fff;
+        }
+
+        .tool-btn.active {
+            background: var(--c1);
+            color: #000;
+            box-shadow: 0 0 15px rgba(0, 230, 118, 0.3);
+        }
+
+        /* Status Overlay */
+        .status-overlay {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(10, 10, 12, 0.95);
+            color: var(--c1);
+            padding: 8px 24px;
+            border-radius: 30px;
+            border: 1px solid var(--c1);
+            z-index: 1000;
+            font-weight: bold;
+            backdrop-filter: blur(10px);
+        }
+
+        /* Context Menu */
+        .context-menu {
+            position: fixed;
+            background: rgba(15, 15, 18, 0.98);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 8px;
+            min-width: 180px;
+            z-index: 2000;
+            backdrop-filter: blur(20px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        .menu-item {
+            padding: 10px 12px;
+            cursor: pointer;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: 0.2s;
+        }
+
+        .menu-item:hover {
+            background: rgba(255,255,255,0.05);
+        }
+
+        .menu-item.danger {
+            color: #ff5252;
+        }
+
+        .menu-item.danger:hover {
+            background: rgba(255, 82, 82, 0.1);
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: var(--bg); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #333; }
+
+        /* Range Input */
+        input[type="range"] {
+            width: 100%;
+            accent-color: var(--c1);
+            height: 6px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <script src="https://unpkg.com/jszip@3.10.1/dist/jszip.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef, useMemo, useCallback } = React;
+        
+        // Inline Icons for maximum reliability in standalone file
+        const Icon = ({ children, size = 24, color = "currentColor", ...props }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+                {children}
+            </svg>
+        );
+
+        const MousePointer2 = (p) => <Icon {...p}><path d="m3 3 7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/><path d="m13 13 6 6"/></Icon>;
+        const Hand = (p) => <Icon {...p}><path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"/><path d="M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"/><path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/><path d="M10 10V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"/></Icon>;
+        const Ruler = (p) => <Icon {...p}><path d="M21.3 15.3 4.7 4.7c-1.2-1.2-3.1-1.2-4.3 0-1.2 1.2-1.2 3.1 0 4.3l10.6 10.6c1.2 1.2 3.1 1.2 4.3 0l1.7-1.7"/><path d="m14.5 12.5 2-2"/><path d="m11.5 9.5 2-2"/><path d="m8.5 6.5 2-2"/><path d="m17.5 15.5 2-2"/></Icon>;
+        const Eye = (p) => <Icon {...p}><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></Icon>;
+        const Maximize = (p) => <Icon {...p}><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></Icon>;
+        const Grid = (p) => <Icon {...p}><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M3 15h18"/><path d="M9 3v18"/><path d="M15 3v18"/></Icon>;
+        const Upload = (p) => <Icon {...p}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></Icon>;
+        const RotateCcw = (p) => <Icon {...p}><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></Icon>;
+        const Download = (p) => <Icon {...p}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></Icon>;
+        const X = (p) => <Icon {...p}><path d="M18 6 6 18"/><path d="M6 6l12 12"/></Icon>;
+
+        // --- Utils ---
+        const initGridCoords = (img, c, r) => {
+            if (!img) return [];
+            const cellW = img.width / c;
+            const cellH = img.height / r;
+            const newCells = [];
+            for (let row = 0; row < r; row++) {
+                for (let col = 0; col < c; col++) {
+                    newCells.push({ 
+                        id: row * c + col, 
+                        x: col * cellW, y: row * cellH, 
+                        w: cellW, h: cellH,
+                        originalX: col * cellW, originalY: row * cellH,
+                        originalW: cellW, originalH: cellH
+                    });
+                }
+            }
+            return newCells;
+        };
+
+        const findEdgeHitUtil = (x, y, img, cells, zoom) => {
+            if (!img) return null;
+            const threshold = 15 / zoom; 
+            for (let cell of cells) {
+                const isNearLeft = Math.abs(x - cell.x) < threshold;
+                const isNearRight = Math.abs(x - (cell.x + cell.w)) < threshold;
+                const isNearTop = Math.abs(y - cell.y) < threshold;
+                const isNearBottom = Math.abs(y - (cell.y + cell.h)) < threshold;
+                const withinX = x >= cell.x - threshold && x <= cell.x + cell.w + threshold;
+                const withinY = y >= cell.y - threshold && y <= cell.y + cell.h + threshold;
+                if (withinX && withinY) {
+                    if (isNearLeft && isNearTop) return { cell, edge: 'top-left' };
+                    if (isNearRight && isNearBottom) return { cell, edge: 'bottom-right' };
+                    if (isNearLeft && isNearBottom) return { cell, edge: 'bottom-left' };
+                    if (isNearRight && isNearTop) return { cell, edge: 'top-right' };
+                    if (isNearLeft) return { cell, edge: 'left' };
+                    if (isNearRight) return { cell, edge: 'right' };
+                    if (isNearTop) return { cell, edge: 'top' };
+                    if (isNearBottom) return { cell, edge: 'bottom' };
+                }
+            }
+            return null;
+        };
+
+        // --- Hooks ---
+        const useGridCanvas = ({ canvasRef, img, cells, zoom, pan, namingType, showRulers, showGrid }) => {
+            useEffect(() => {
+                if (!img || !canvasRef.current) return;
+                const ctx = canvasRef.current.getContext('2d');
+                canvasRef.current.width = img.width;
+                canvasRef.current.height = img.height;
+                ctx.drawImage(img, 0, 0);
+
+                ctx.font = `bold ${Math.max(12, 14 / zoom)}px Cairo`;
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                const arabicAlphabet = ['أ', 'ب', 'ت', 'ث', 'ج', 'ح', 'خ', 'د', 'ذ', 'ر', 'ز', 'س', 'ش', 'ص', 'ض', 'ط', 'ظ', 'ع', 'غ', 'ف', 'ق', 'ك', 'ل', 'م', 'ن', 'هـ', 'و', 'ي'];
+
+                cells.forEach((cell, index) => {
+                    let label = (index + 1).toString().padStart(2, '0');
+                    if (namingType === 'letters') label = String.fromCharCode(65 + (index % 26));
+                    else if (namingType === 'arabic') label = arabicAlphabet[index % arabicAlphabet.length];
+
+                    if (showGrid) {
+                        ctx.strokeStyle = "rgba(0,230,118,0.5)";
+                        ctx.lineWidth = 2 / zoom;
+                        ctx.setLineDash([5 / zoom, 5 / zoom]);
+                        ctx.strokeRect(cell.x, cell.y, cell.w, cell.h);
+                        ctx.setLineDash([]);
+                    }
+
+                    if (showRulers) {
+                        ctx.fillStyle = "rgba(0,0,0,0.6)";
+                        const tw = ctx.measureText(label).width + (10 / zoom);
+                        ctx.fillRect(cell.x + 5/zoom, cell.y + 5/zoom, tw, 20/zoom);
+                        ctx.fillStyle = "#fff";
+                        ctx.fillText(label, cell.x + 5/zoom + tw/2, cell.y + 5/zoom + 10/zoom);
+                    }
+
+                    // Resize Handles
+                    const hSize = 6 / zoom;
+                    ctx.fillStyle = "#00e676";
+                    ctx.beginPath(); ctx.arc(cell.x, cell.y, hSize, 0, Math.PI * 2); ctx.fill();
+                    ctx.beginPath(); ctx.arc(cell.x + cell.w, cell.y + cell.h, hSize, 0, Math.PI * 2); ctx.fill();
+                });
+            }, [img, cells, zoom, pan, namingType, showRulers, showGrid]);
+        };
+
+        const useGridExport = ({ img, cells, prefix, namingType, exportFormat, isZip, setIsDownloading, setStatusMsg }) => {
+            const downloadFile = (url, name) => {
+                const a = document.createElement('a');
+                a.href = url; a.download = name;
+                document.body.appendChild(a); a.click(); document.body.removeChild(a);
+            };
+
+            const handleDownloadAll = async (overrideZip = null) => {
+                const finalIsZip = overrideZip !== null ? overrideZip : isZip;
+                if(!img || cells.length === 0) return;
+                setIsDownloading(true);
+                setStatusMsg(finalIsZip ? "جاري تحضير ملف ZIP..." : "جاري تنزيل الملفات...");
+
+                const pfx = prefix || "split";
+                const zip = finalIsZip ? new JSZip() : null;
+                const format = exportFormat || 'png';
+                const mime = `image/${format === 'jpg' ? 'jpeg' : format}`;
+                const arabicAlphabet = ['أ', 'ب', 'ت', 'ث', 'ج', 'ح', 'خ', 'د', 'ذ', 'ر', 'ز', 'س', 'ش', 'ص', 'ض', 'ط', 'ظ', 'ع', 'غ', 'ف', 'ق', 'ك', 'ل', 'م', 'ن', 'هـ', 'و', 'ي'];
+
+                for (let i = 0; i < cells.length; i++) {
+                    const cell = cells[i];
+                    let label = (i + 1).toString().padStart(2, '0');
+                    if (namingType === 'letters') label = String.fromCharCode(65 + (i % 26));
+                    else if (namingType === 'arabic') label = arabicAlphabet[i % arabicAlphabet.length];
+
+                    const temp = document.createElement('canvas');
+                    temp.width = cell.w; temp.height = cell.h;
+                    temp.getContext('2d').drawImage(img, cell.x, cell.y, cell.w, cell.h, 0, 0, cell.w, cell.h);
+                    
+                    if (finalIsZip) {
+                        const blob = await new Promise(res => temp.toBlob(res, mime));
+                        zip.file(`${pfx}_${label}.${format}`, blob);
+                    } else {
+                        downloadFile(temp.toDataURL(mime), `${pfx}_${label}.${format}`);
+                        await new Promise(r => setTimeout(r, 400));
+                    }
+                }
+
+                if (finalIsZip) {
+                    const content = await zip.generateAsync({type: "blob"});
+                    const url = URL.createObjectURL(content);
+                    downloadFile(url, `${pfx}_export.zip`);
+                    setTimeout(() => URL.revokeObjectURL(url), 10000);
+                }
+                setIsDownloading(false);
+                setStatusMsg("اكتمل التصدير بنجاح! ✅");
+                setTimeout(() => setStatusMsg(''), 3000);
+            };
+
+            return { handleDownloadAll };
+        };
+
+        // --- Components ---
+
+        const Sidebar = (props) => {
+            const handleWheel = (e, setter) => {
+                e.preventDefault();
+                setter(prev => Math.max(1, prev + (e.deltaY > 0 ? -1 : 1)));
+            };
+
+            return (
+                <div className="sidebar">
+                    <label className="upload-area">
+                        <input type="file" accept="image/*" style={{display:'none'}} onChange={e => props.handleFile(e.target.files[0])} />
+                        <Upload size={32} />
+                        <div style={{marginTop:'10px'}}>اسحب الصورة هنا أو انقر للرفع</div>
+                    </label>
+
+                    <div className="section-title">إنشاء الشبكة الأساسية</div>
+                    <div className="presets">
+                        {[2,3,4].map(n => <button key={n} className="preset-btn" onClick={() => {props.setCols(n); props.setRows(n);}}>{n}x{n}</button>)}
+                    </div>
+                    <div className="row-grid">
+                        <div className="input-group">
+                            <label>أعمدة</label>
+                            <input type="number" value={props.cols} onChange={e=>props.setCols(parseInt(e.target.value)||1)} onWheel={e=>handleWheel(e, props.setCols)} className="input-field" />
+                        </div>
+                        <div className="input-group">
+                            <label>صفوف</label>
+                            <input type="number" value={props.rows} onChange={e=>props.setRows(parseInt(e.target.value)||1)} onWheel={e=>handleWheel(e, props.setRows)} className="input-field" />
+                        </div>
+                    </div>
+
+                    <div className="section-title">ضبط احترافي شامل</div>
+                    <div className="input-group">
+                        <label>تقليص أفقي (X): {props.globalPadding.x}px</label>
+                        <input type="range" max="200" value={props.globalPadding.x} onChange={e=>props.setGlobalPadding({...props.globalPadding, x: parseInt(e.target.value)})} />
+                    </div>
+                    <div className="input-group">
+                        <label>تقليص رأسي (Y): {props.globalPadding.y}px</label>
+                        <input type="range" max="200" value={props.globalPadding.y} onChange={e=>props.setGlobalPadding({...props.globalPadding, y: parseInt(e.target.value)})} />
+                    </div>
+
+                    <button className="btn-secondary" onClick={props.handleResetAll}>
+                        <RotateCcw size={16} /> إعادة تعيين الحدود
+                    </button>
+
+                    <div className="section-title">إعدادات التصدير</div>
+                    <div className="input-group">
+                        <label>اسم الملف</label>
+                        <input type="text" value={props.prefix} onChange={e=>props.setPrefix(e.target.value)} className="input-field" />
+                    </div>
+                    <div className="row-grid">
+                        <div className="input-group">
+                            <label>نوع الترقيم</label>
+                            <select value={props.namingType} onChange={e=>props.setNamingType(e.target.value)} className="input-field">
+                                <option value="numbers">أرقام</option>
+                                <option value="letters">حروف (A..)</option>
+                                <option value="arabic">عربي (أ..)</option>
+                            </select>
+                        </div>
+                        <div className="input-group">
+                            <label>الصيغة</label>
+                            <select value={props.exportFormat} onChange={e=>props.setExportFormat(e.target.value)} className="input-field">
+                                <option value="png">PNG</option>
+                                <option value="jpg">JPG</option>
+                                <option value="webp">WEBP</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div style={{marginTop:'auto', display:'flex', flexDirection:'column', gap:'10px'}}>
+                        <button className="btn-main" disabled={!props.img || props.isDownloading} onClick={() => props.handleDownloadAll(true)}>
+                            <Download size={18} /> تصدير ZIP
+                        </button>
+                        <button className="btn-secondary" disabled={!props.img || props.isDownloading} onClick={() => props.handleDownloadAll(false)}>
+                            تنزيل صور منفصلة
+                        </button>
+                    </div>
+                </div>
+            );
+        };
+
+        const FloatingToolbar = (props) => (
+            <div className="floating-toolbar">
+                <button className={`tool-btn ${props.activeTool === 'select' ? 'active' : ''}`} onClick={()=>props.setActiveTool('select')} title="أداة التحديد والقص"><MousePointer2 size={20} /></button>
+                <button className={`tool-btn ${props.activeTool === 'pan' ? 'active' : ''}`} onClick={()=>props.setActiveTool('pan')} title="أداة التحريك"><Hand size={20} /></button>
+                <button className={`tool-btn ${props.showRulers ? 'active' : ''}`} onClick={()=>props.setShowRulers(!props.showRulers)} title="إظهار الأرقام"><Ruler size={20} /></button>
+                <button className={`tool-btn ${props.showGrid ? 'active' : ''}`} onClick={()=>props.setShowGrid(!props.showGrid)} title="إظهار الخطوط"><Grid size={20} /></button>
+                <button className="tool-btn" onClick={()=>props.fitToScreen()} title="ملاءمة الشاشة"><Maximize size={20} /></button>
+            </div>
+        );
+
+        // --- Main App ---
+        function App() {
+            const canvasRef = useRef(null);
+            const previewRef = useRef(null);
+            const [img, setImg] = useState(null);
+            const [cells, setCells] = useState([]);
+            const [cols, setCols] = useState(3);
+            const [rows, setRows] = useState(3);
+            const [prefix, setPrefix] = useState('split');
+            const [namingType, setNamingType] = useState('numbers');
+            const [exportFormat, setExportFormat] = useState('png');
+            const [zoom, setZoom] = useState(1);
+            const [pan, setPan] = useState({ x: 0, y: 0 });
+            const [isDownloading, setIsDownloading] = useState(false);
+            const [statusMsg, setStatusMsg] = useState('');
+            const [activeTool, setActiveTool] = useState('select');
+            const [showRulers, setShowRulers] = useState(true);
+            const [showGrid, setShowGrid] = useState(true);
+            const [globalPadding, setGlobalPadding] = useState({ x: 0, y: 0 });
+
+            const stateRef = useRef({ isPanning: false, isDragging: false, panStartX: 0, panStartY: 0, initialPanX: 0, initialPanY: 0, activeCell: null, resizeEdge: null, dragStartX: 0, dragStartY: 0 });
+
+            useGridCanvas({ canvasRef, img, cells, zoom, pan, namingType, showRulers, showGrid });
+            const { handleDownloadAll } = useGridExport({ img, cells, prefix, namingType, exportFormat, setIsDownloading, setStatusMsg });
+
+            useEffect(() => {
+                if (img) setCells(initGridCoords(img, cols, rows));
+            }, [cols, rows, img]);
+
+            useEffect(() => {
+                if (!img || cells.length === 0) return;
+                setCells(prev => prev.map(cell => {
+                    if (cell.isManual || cell.originalW === undefined) return cell;
+                    return {
+                        ...cell,
+                        x: cell.originalX + globalPadding.x,
+                        y: cell.originalY + globalPadding.y,
+                        w: Math.max(10, cell.originalW - globalPadding.x * 2),
+                        h: Math.max(10, cell.originalH - globalPadding.y * 2)
+                    };
+                }));
+            }, [globalPadding, img]);
+
+            const fitToScreen = (loadedImg = img) => {
+                if (!loadedImg || !previewRef.current) return;
+                const pw = previewRef.current.clientWidth, ph = previewRef.current.clientHeight;
+                const ratio = Math.min((pw - 60) / loadedImg.width, (ph - 60) / loadedImg.height);
+                setZoom(ratio > 0 ? ratio : 0.1); setPan({ x: 0, y: 0 });
+            };
+
+            const handleFile = (file) => {
+                if (!file || !file.type.startsWith('image/')) return;
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    const tempImg = new Image();
+                    tempImg.onload = () => {
+                        setImg(tempImg);
+                        setPrefix(file.name.split('.')[0]);
+                        setExportFormat(file.type.split('/')[1].replace('jpeg','jpg'));
+                        fitToScreen(tempImg);
+                        setCells(initGridCoords(tempImg, cols, rows));
+                    };
+                    tempImg.src = ev.target.result;
+                };
+                reader.readAsDataURL(file);
+            };
+
+            const handleMouseDown = (e) => {
+                if (activeTool === 'pan' || e.button === 1) {
+                    stateRef.current.isPanning = true;
+                    stateRef.current.panStartX = e.clientX; stateRef.current.panStartY = e.clientY;
+                    stateRef.current.initialPanX = pan.x; stateRef.current.initialPanY = pan.y;
+                    return;
+                }
+                const rect = canvasRef.current.getBoundingClientRect();
+                const cx = (e.clientX - (rect.left + rect.width / 2)) / zoom + img.width / 2;
+                const cy = (e.clientY - (rect.top + rect.height / 2)) / zoom + img.height / 2;
+                const hit = findEdgeHitUtil(cx, cy, img, cells, zoom);
+                if (hit) {
+                    stateRef.current.isDragging = true;
+                    stateRef.current.activeCell = hit.cell;
+                    stateRef.current.resizeEdge = hit.edge;
+                    stateRef.current.dragStartX = cx;
+                    stateRef.current.dragStartY = cy;
+                    stateRef.current.initialCell = { ...hit.cell };
+                }
+            };
+
+            const handleMouseMove = (e) => {
+                if (stateRef.current.isPanning) {
+                    setPan({ x: stateRef.current.initialPanX + (e.clientX - stateRef.current.panStartX), y: stateRef.current.initialPanY + (e.clientY - stateRef.current.panStartY) });
+                    return;
+                }
+                if (!stateRef.current.isDragging || !img) return;
+                const rect = canvasRef.current.getBoundingClientRect();
+                const cx = (e.clientX - (rect.left + rect.width / 2)) / zoom + img.width / 2;
+                const cy = (e.clientY - (rect.top + rect.height / 2)) / zoom + img.height / 2;
+                const dx = cx - stateRef.current.dragStartX, dy = cy - stateRef.current.dragStartY;
+                const { activeCell, resizeEdge, initialCell } = stateRef.current;
+
+                setCells(prev => prev.map(c => {
+                    if (c.id !== activeCell.id) return c;
+                    let nc = { ...c, isManual: true };
+                    if (resizeEdge.includes('right')) nc.w = Math.min(Math.max(10, initialCell.w + dx), img.width - initialCell.x);
+                    if (resizeEdge.includes('left')) { nc.x = Math.max(0, Math.min(initialCell.x + dx, initialCell.x + initialCell.w - 10)); nc.w = initialCell.x + initialCell.w - nc.x; }
+                    if (resizeEdge.includes('bottom')) nc.h = Math.min(Math.max(10, initialCell.h + dy), img.height - initialCell.y);
+                    if (resizeEdge.includes('top')) { nc.y = Math.max(0, Math.min(initialCell.y + dy, initialCell.y + initialCell.h - 10)); nc.h = initialCell.y + initialCell.h - nc.y; }
+
+                    // Magnet
+                    const snapThreshold = 15 / zoom;
+                    const xTargets = [0, img.width], yTargets = [0, img.height];
+                    prev.forEach(o => { if(o.id!==c.id) { xTargets.push(o.x, o.x+o.w); yTargets.push(o.y, o.y+o.h); } });
+                    const snap = (v, t) => { let cl = v; let md = snapThreshold; t.forEach(x => { if(Math.abs(v-x)<md){ md=Math.abs(v-x); cl=x; } }); return cl; };
+                    if (resizeEdge.includes('left')) { nc.x = snap(nc.x, xTargets); nc.w = initialCell.x + initialCell.w - nc.x; }
+                    if (resizeEdge.includes('right')) { nc.w = Math.max(10, snap(nc.x + nc.w, xTargets) - nc.x); }
+                    if (resizeEdge.includes('top')) { nc.y = snap(nc.y, yTargets); nc.h = initialCell.y + initialCell.h - nc.y; }
+                    if (resizeEdge.includes('bottom')) { nc.h = Math.max(10, snap(nc.y + nc.h, yTargets) - nc.y); }
+
+                    return nc;
+                }));
+            };
+
+            const handleMouseUp = () => { stateRef.current.isPanning = false; stateRef.current.isDragging = false; };
+
+            return (
+                <div className="app-container">
+                    {statusMsg && <div className="status-overlay">{statusMsg}</div>}
+                    <div className="main-layout">
+                        <Sidebar 
+                            handleFile={handleFile} cols={cols} setCols={setCols} rows={rows} setRows={setRows}
+                            globalPadding={globalPadding} setGlobalPadding={setGlobalPadding} prefix={prefix} setPrefix={setPrefix}
+                            namingType={namingType} setNamingType={setNamingType} exportFormat={exportFormat} setExportFormat={setExportFormat}
+                            img={img} isDownloading={isDownloading} handleDownloadAll={handleDownloadAll}
+                            handleResetAll={() => setCells(initGridCoords(img, cols, rows))}
+                        />
+                        <div className="preview-area" ref={previewRef} onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}>
+                            {!img && <div style={{color:'var(--text-dim)'}}>يرجى رفع صورة للبدء</div>}
+                            <div className="canvas-wrapper" style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})` }}>
+                                <canvas ref={canvasRef} className="main-canvas" onMouseDown={handleMouseDown} />
+                            </div>
+                            <FloatingToolbar 
+                                activeTool={activeTool} setActiveTool={setActiveTool} 
+                                showRulers={showRulers} setShowRulers={setShowRulers}
+                                showGrid={showGrid} setShowGrid={setShowGrid}
+                                fitToScreen={fitToScreen}
+                            />
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>

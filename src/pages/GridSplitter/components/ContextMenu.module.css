@@ -1,0 +1,45 @@
+.contextMenu {
+  position: fixed;
+  background: rgba(17, 17, 20, 0.95);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 8px 0;
+  min-width: 180px;
+  z-index: 10000;
+  backdrop-filter: blur(15px);
+  box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+}
+
+.menuItem {
+  padding: 10px 20px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  color: var(--text);
+  transition: 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+}
+
+.menuItem:hover {
+  background: var(--c1);
+  color: #000;
+}
+
+.menuItemDanger {
+  padding: 10px 20px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  color: #ff5252;
+  transition: 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+}
+
+.menuItemDanger:hover {
+  background: #ff5252;
+  color: #fff;
+}

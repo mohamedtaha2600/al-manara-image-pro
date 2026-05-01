@@ -1,0 +1,369 @@
+.container {
+  height: calc(100vh - 64px);
+  background: #020617;
+  color: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  font-family: 'Inter', sans-serif;
+  --wat-primary: #e91e63;
+  --wat-surface: #0f172a;
+  --wat-border: #1e293b;
+}
+
+.mainLayout {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* Sidebar */
+.sidebar {
+  width: 320px;
+  background: var(--wat-surface);
+  border-left: 1px solid var(--wat-border);
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  gap: 20px;
+  overflow-y: auto;
+  box-shadow: 10px 0 30px rgba(0,0,0,0.5);
+}
+
+.sectionTitle {
+  font-size: 1.1rem;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--wat-primary);
+  margin-bottom: 10px;
+}
+
+/* Tabs */
+.tabGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  background: #0f172a;
+  padding: 5px;
+  border-radius: 12px;
+}
+
+.tabBtn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  padding: 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-weight: 600;
+  transition: 0.3s;
+}
+
+.tabActive {
+  background: var(--wat-primary);
+  color: white;
+  box-shadow: 0 4px 12px rgba(233, 30, 99, 0.3);
+}
+
+/* Controls */
+.inputGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.labelSmall {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.textInput {
+  background: #0f172a;
+  border: 1px solid var(--wat-border);
+  color: white;
+  padding: 12px;
+  border-radius: 8px;
+  outline: none;
+  font-size: 0.9rem;
+  transition: 0.3s;
+}
+
+.textInput:focus {
+  border-color: var(--wat-primary);
+}
+
+.controlRow {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+input[type="range"] {
+  width: 100%;
+  accent-color: var(--wat-primary);
+}
+
+.colorPicker {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  border: 1px solid var(--wat-border);
+  cursor: pointer;
+  background: none;
+  padding: 2px;
+}
+
+/* Anchor Grid */
+.anchorGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 5px;
+  background: #0f172a;
+  padding: 10px;
+  border-radius: 12px;
+  width: fit-content;
+  align-self: center;
+}
+
+.anchorBtn {
+  width: 32px;
+  height: 32px;
+  background: #334155;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.anchorBtn:hover {
+  background: #475569;
+}
+
+.anchorActive {
+  background: var(--wat-primary);
+  box-shadow: 0 0 10px rgba(233, 30, 99, 0.5);
+}
+
+.anchorDot {
+  width: 6px;
+  height: 6px;
+  background: rgba(255,255,255,0.3);
+  border-radius: 50%;
+}
+
+.anchorActive .anchorDot {
+  background: #fff;
+}
+
+/* Tiling Button */
+.tileBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 12px;
+  background: rgba(233, 30, 99, 0.1);
+  border: 1px dashed var(--wat-primary);
+  color: var(--wat-primary);
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: 700;
+  transition: 0.3s;
+}
+
+.tileActive {
+  background: var(--wat-primary);
+  color: white;
+  border-style: solid;
+}
+
+/* Buttons */
+.btnMain {
+  background: var(--wat-primary);
+  color: white;
+  border: none;
+  padding: 14px;
+  border-radius: 12px;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.btnMain:hover {
+  filter: brightness(1.1);
+  transform: translateY(-2px);
+}
+
+.btnMain:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btnSecondary {
+  background: #334155;
+  color: white;
+  border: none;
+  padding: 12px;
+  border-radius: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+/* Workspace */
+.workspace {
+  flex: 1;
+  position: relative;
+  background: #020617;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.canvasContainer {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.canvasWrapper {
+  box-shadow: 0 0 50px rgba(0,0,0,0.5);
+  background-image: 
+    linear-gradient(45deg, #1e293b 25%, transparent 25%),
+    linear-gradient(-45deg, #1e293b 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #1e293b 75%),
+    linear-gradient(-45deg, transparent 75%, #1e293b 75%);
+  background-size: 20px 20px;
+  background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+}
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  text-align: center;
+  cursor: pointer;
+  opacity: 0.6;
+  transition: 0.3s;
+}
+
+.emptyState:hover {
+  opacity: 1;
+  transform: scale(1.05);
+}
+
+/* Bottom Bar */
+.bottomBar {
+  background: var(--wat-surface);
+  border-top: 1px solid var(--wat-border);
+  padding: 10px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  height: 160px;
+}
+
+.imageListHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 700;
+}
+
+.addMoreBtn {
+  background: var(--wat-primary);
+  border: none;
+  color: white;
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.imageListItems {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding-bottom: 5px;
+}
+
+.imageThumb {
+  min-width: 100px;
+  width: 100px;
+  height: 70px;
+  border-radius: 8px;
+  overflow: hidden;
+  position: relative;
+  cursor: pointer;
+  border: 2px solid transparent;
+  background: #0f172a;
+}
+
+.imageThumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.thumbActive {
+  border-color: var(--wat-primary);
+}
+
+.thumbOverlay {
+  position: absolute;
+  bottom: 5px;
+  right: 5px;
+  background: rgba(0,0,0,0.7);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+}
+
+.deleteThumbBtn {
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  background: rgba(255,0,0,0.2);
+  border: none;
+  color: white;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: 0.3s;
+}
+
+.imageThumb:hover .deleteThumbBtn {
+  opacity: 1;
+}
+
+.scrollBar::-webkit-scrollbar { height: 6px; width: 6px; }
+.scrollBar::-webkit-scrollbar-track { background: transparent; }
+.scrollBar::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+.scrollBar::-webkit-scrollbar-thumb:hover { background: var(--wat-primary); }
