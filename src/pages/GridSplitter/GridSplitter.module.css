@@ -87,9 +87,176 @@
   top: 0;
   left: 0;
   pointer-events: none;
-  z-index: 20;
+  z-index: 50;
 }
 
 .cropOverlay > * {
   pointer-events: all;
+}
+
+/* ── Image Library (Sidebar/Left) ── */
+.imageLibrary {
+  width: 130px;
+  min-width: 130px;
+  background: rgba(10, 10, 15, 0.9);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  padding: 15px 10px;
+  gap: 12px;
+  overflow-y: auto;
+  backdrop-filter: blur(10px);
+}
+
+.libraryHeader {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  font-weight: 700;
+  text-align: center;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  margin-bottom: 5px;
+}
+
+.libraryItem {
+  position: relative;
+  width: 110px;
+  height: 80px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 2px solid rgba(255,255,255,0.05);
+  cursor: pointer;
+  flex-shrink: 0;
+  background: #111;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.libraryItem:hover {
+  border-color: var(--c1);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+}
+
+.libraryItemActive {
+  border-color: var(--c1);
+  box-shadow: 0 0 15px rgba(0, 230, 118, 0.2);
+}
+
+.libraryItem img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.activeBadge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  background: var(--c1);
+  color: #000;
+  font-size: 10px;
+  font-weight: bold;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.addOverlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 230, 118, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.libraryItem:hover .addOverlay {
+  opacity: 1;
+}
+
+/* Sidebar Sectioning */
+.sidebarSection {
+  width: 100%;
+  padding-bottom: 15px;
+  margin-bottom: 15px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.sectionTitle {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-dim);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.presetsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin-bottom: 15px;
+}
+
+.presetBtn {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: var(--text-dim);
+  padding: 6px 0;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.presetBtn:hover {
+  background: rgba(255,255,255,0.08);
+  border-color: var(--c1);
+  color: #fff;
+}
+
+.presetBtn.active {
+  background: var(--c1);
+  border-color: var(--c1);
+  color: #000;
+  font-weight: bold;
+}
+
+.inputGroup {
+  margin-bottom: 12px;
+}
+
+.label {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  margin-bottom: 5px;
+}
+
+.btnIcon {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: var(--text-dim);
+  padding: 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  flex: 1;
+}
+
+.btnIcon:hover {
+  background: rgba(255,255,255,0.1);
+  color: #fff;
+  border-color: var(--c1);
 }

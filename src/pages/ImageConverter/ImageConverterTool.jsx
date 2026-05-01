@@ -2,14 +2,61 @@ import { useState, useRef, useEffect } from 'react';
 import { 
   Upload, Download, RefreshCw, FileImage, 
   Trash2, FileVideo, CheckCircle2, AlertCircle,
-  Settings, Layers, Zap, Info, X, Plus
+  Settings, Layers, Zap, Info, X, Plus, Play
 } from 'lucide-react';
 import styles from './ImageConverter.module.css';
 
 import JSZip from 'jszip';
 import { useConverter } from './hooks/useConverter';
 
+// Shared components
+import GenericTutorial from '../../components/Shared/GenericTutorial';
+import GenericHelpModal from '../../components/Shared/GenericHelpModal';
+import { useToolOnboarding } from '../../components/Shared/useToolOnboarding';
+
+const converterTutorialSteps = [
+  {
+    title: "مرحباً بك في محول الصيغ الذكي!",
+    content: "هنا يمكنك تحويل مئات الصور بضغطة زر واحدة وبجودة عالية.",
+    icon: <RefreshCw size={40} color="var(--c1)" />
+  },
+  {
+    title: "اختيار الصيغ",
+    content: "يمكنك اختيار صيغة موحدة للكل، أو تغيير صيغة كل صورة على حدة من داخل الجدول.",
+    icon: <Settings size={40} color="var(--c2)" />
+  },
+  {
+    title: "جودة التحويل",
+    content: "تحكم في جودة الصور الناتجة لتقليل حجم الملفات مع الحفاظ على وضوحها.",
+    icon: <Zap size={40} color="var(--c1)" />
+  },
+  {
+    title: "التحميل الجماعي",
+    content: "بعد انتهاء التحويل، يمكنك تحميل جميع الصور في ملف ZIP واحد مضغوط.",
+    icon: <Download size={40} color="var(--c3)" />
+  }
+];
+
+const converterHelpSections = [
+  {
+    title: "الصيغ المدعومة",
+    icon: <FileImage size={18} />,
+    content: "ندعم التحويل بين أشهر صيغ الصور (WebP, PNG, JPG). نوصي باستخدام WebP للحصول على أقل حجم مع أعلى جودة."
+  },
+  {
+    title: "الخصوصية والسرعة",
+    icon: <Zap size={18} />,
+    content: "عملية التحويل تتم بالكامل داخل متصفحك (Client-side). ملفاتك لا ترفع على أي سيرفر، مما يضمن خصوصية 100% وسرعة فائقة."
+  },
+  {
+    title: "تحويل الفيديوهات",
+    icon: <Info size={18} />,
+    content: "ندعم أيضاً استخراج إطارات من الفيديوهات وتحويلها لصور (قريباً في التحديثات القادمة)."
+  }
+];
+
 export default function ImageConverterTool() {
+  const { showTutorial, setShowTutorial, showHelp, setShowHelp } = useToolOnboarding('image-converter');
   const [files, setFiles] = useState([]);
   const [targetFormat, setTargetFormat] = useState('webp');
   const [quality, setQuality] = useState(90);
@@ -123,6 +170,15 @@ export default function ImageConverterTool() {
       <div className={styles.mainLayout}>
         {/* 🛠️ Sidebar Settings */}
         <div className={styles.sidebar}>
+          <div style={{ display: 'flex', gap: '10px', marginBottom: '25px' }}>
+            <button onClick={() => setShowTutorial(true)} style={{ flex: 1, background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', padding: '10px', borderRadius: '12px', color: '#fff', fontSize: '0.7rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', cursor: 'pointer' }}>
+              <Play size={14} color="var(--c1)" /> الشرح التفاعلي
+            </button>
+            <button onClick={() => setShowHelp(true)} style={{ flex: 1, background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', padding: '10px', borderRadius: '12px', color: '#fff', fontSize: '0.7rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', cursor: 'pointer' }}>
+              <Info size={14} color="var(--c1)" /> التعليمات
+            </button>
+          </div>
+
           <div className={styles.dropzone} onClick={() => fileInputRef.current.click()}>
             <Upload size={32} color="var(--c3)" />
             <div className={styles.dropzoneText}>
@@ -307,6 +363,9 @@ export default function ImageConverterTool() {
           </div>
         </div>
       )}
+
+      <GenericTutorial show={showTutorial} onClose={() => setShowTutorial(false)} steps={converterTutorialSteps} />
+      <GenericHelpModal show={showHelp} onClose={() => setShowHelp(false)} title="دليل محول الصيغ" sections={converterHelpSections} />
     </div>
   );
 }

@@ -12,6 +12,54 @@
   display: flex;
   flex: 1;
   overflow: hidden;
+  position: relative;
+}
+
+.rightContent {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+  background: #000;
+}
+
+.topSection {
+  flex: 1;
+  display: flex;
+  flex-direction: row;
+  position: relative;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.workspace {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-image: radial-gradient(#222 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+.previewContainer {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.bottomBar {
+  height: 260px;
+  background: var(--sidebar-bg);
+  border-top: 1px solid var(--border);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 /* Sidebar */
@@ -106,14 +154,13 @@
 }
 
 /* Preview Area */
-.previewArea {
-  flex: 1;
-  overflow: hidden; /* منع الـ Scroll العام */
-  display: flex;
-  flex-direction: column;
-  background: #040408;
+/* Workspace Background Patterns */
+.workspacePattern {
+  position: absolute;
+  inset: 0;
   background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
   background-size: 24px 24px;
+  pointer-events: none;
 }
 
 .previewTopSection {
@@ -164,6 +211,14 @@
   max-height: 90%;
   object-fit: contain;
   opacity: 0.3;
+}
+
+.compImgVisible {
+  max-width: 95%;
+  max-height: 95%;
+  object-fit: contain;
+  opacity: 1;
+  filter: drop-shadow(0 0 20px rgba(0,0,0,0.5));
 }
 
 .compOverlay {
@@ -283,10 +338,14 @@
 }
 
 .sidebarActions {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 260px;
   display: flex;
   flex-direction: column;
   gap: 10px;
-  margin-top: auto;
+  z-index: 100;
 }
 
 .btnDownloadAll {

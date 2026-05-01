@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import styles from './GridSplitter.module.css';
 import HelpModal from './components/HelpModal';
 import Sidebar from './components/Sidebar';
@@ -6,139 +6,135 @@ import PreviewOverlay from './components/PreviewOverlay';
 import FloatingToolbar from './components/FloatingToolbar';
 import ContextMenu from './components/ContextMenu';
 import TutorialOverlay from './components/TutorialOverlay';
-import { initGridCoords, getCanvasCoordsUtil, findEdgeHitUtil } from './utils/gridUtils';
+import CropToolOverlay from './components/CropToolOverlay';
+import GridImageLibrary from './components/GridImageLibrary';
+import { getCanvasCoordsUtil, findEdgeHitUtil, initGridCoords } from './utils/gridUtils';
 import { useGridExport } from './hooks/useGridExport';
 import { useGridCanvas } from './hooks/useGridCanvas';
 import { usePreviewRender } from './hooks/usePreviewRender';
+import { useGridState } from './hooks/useGridState';
+
+// Shared components
+import GenericTutorial from '../../components/Shared/GenericTutorial';
+import GenericHelpModal from '../../components/Shared/GenericHelpModal';
+import { useToolOnboarding } from '../../components/Shared/useToolOnboarding';
+import { Layout, MousePointer2, Scissors, Download, Info, Play, Grid as GridIcon } from 'lucide-react';
+
+const gridTutorialSteps = [
+  {
+    title: "مرحباً بك في مقسم الصور!",
+    content: "هذه الأداة مصممة لتقسيم صورك إلى شبكة احترافية بدقة عالية جداً.",
+    icon: <Layout size={40} color="var(--c1)" />
+  },
+  {
+    title: "تحديد الشبكة",
+    content: "اختر عدد الأعمدة والصفوف من القائمة الجانبية. سيقوم النظام بحساب التقسيم تلقائياً.",
+    icon: <GridIcon size={40} color="var(--c2)" />
+  },
+  {
+    title: "تعديل يدوي ذكي",
+    content: "يمكنك سحب حواف المربعات في مساحة العمل لتعديل حجم كل خلية بشكل مستقل إذا كنت لا تريد تقسيماً متساوياً.",
+    icon: <MousePointer2 size={40} color="var(--c1)" />
+  },
+  {
+    title: "تصدير احترافي",
+    content: "حمل جميع الأجزاء دفعة واحدة في ملف ZIP واحد، أو اضغط باليمين على أي خلية لتحميلها منفردة.",
+    icon: <Download size={40} color="var(--c3)" />
+  }
+];
+
+const gridHelpSections = [
+  {
+    title: "كيفية البدء",
+    icon: <Layout size={18} />,
+    content: "ارفع صورتك، ثم اختر عدد الصفوف والأعمدة. يمكنك رؤية المعاينة الحية فوراً في مساحة العمل."
+  },
+  {
+    title: "اختصارات التحكم",
+    icon: <MousePointer2 size={18} />,
+    content: "استخدم زر المسافة (Space) مع الماوس للتحريك (Pan)، وبكرة الماوس للزوم. اضغط مرتين على أي خلية لتعديلها."
+  },
+  {
+    title: "تسمية الملفات",
+    icon: <Scissors size={18} />,
+    content: "يمكنك تغيير 'البادئة' (Prefix) لتسمية جميع الملفات الناتجة بشكل منظم (مثلاً: image_1, image_2)."
+  }
+];
 
 export default function GridSplitterTool() {
+  const { showTutorial, setShowTutorial, showHelp, setShowHelp } = useToolOnboarding('grid-splitter');
   const canvasRef = useRef(null);
   const previewRef = useRef(null);
+  const viewerCanvasRef = useRef(null);
   
-  const [img, setImg] = useState(null);
-  const [imgInfo, setImgInfo] = useState('لم يتم تحميل صورة');
-  const [cells, setCells] = useState([]);
-  const [cols, setCols] = useState(3);
-  const [rows, setRows] = useState(3);
-  const [prefix, setPrefix] = useState('');
-  const [namingType, setNamingType] = useState('numbers');
-  const [exportFormat, setExportFormat] = useState('png');
-  const [isZip, setIsZip] = useState(true);
+  // ── Unified State Management ────────────────────────────────────────
+  const {
+    img, setImg, imgInfo, setImgInfo, library, setLibrary, cells, setCells,
+    cols, setCols, rows, setRows, prefix, setPrefix, namingType, setNamingType,
+    exportFormat, setExportFormat, isZip, setIsZip, globalPadding, setGlobalPadding,
+    skipManual, setSkipManual, statusMsg, setStatusMsg, showStatus, handleFile
+  } = useGridState();
+
+  // ── Viewport State ──────────────────────────────────────────────────
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isDownloading, setIsDownloading] = useState(false);
-  const [statusMsg, setStatusMsg] = useState('');
-  
-  // Tools & UI State
   const [activeTool, setActiveTool] = useState('select');
+  const [spacePressed, setSpacePressed] = useState(false);
+  const [isPanning, setIsPanning] = useState(false);
   const [showRulers, setShowRulers] = useState(true);
   const [showGrid, setShowGrid] = useState(true);
+  
+  // ── Modal/Overlay States ──────────────────────────────────────────
+  const [showHelpModal, setShowHelpModal] = useState(false);
   const [previewMode, setPreviewMode] = useState(false);
   const [previewIndex, setPreviewIndex] = useState(0);
   const [previewPan, setPreviewPan] = useState({ x: 0, y: 0 });
   const [previewZoom, setPreviewZoom] = useState(1);
-  const [showHelpModal, setShowHelpModal] = useState(false);
-  const [showTutorial, setShowTutorial] = useState(false);
-  const [spacePressed, setSpacePressed] = useState(false);
-  const viewerCanvasRef = useRef(null);
 
-  // Crop Tool State
-  const [cropBox, setCropBox] = useState(null); // { x, y, w, h } in image coords
-  const cropDragRef = useRef(null); // { handle, startX, startY, startBox }
+  // ── Crop State ──────────────────────────────────────────────────────
+  const [cropBox, setCropBox] = useState(null);
 
-  // D&D and Context Menu
-  const [isDragOver, setIsDragOver] = useState(false);
-  const [contextMenu, setContextMenu] = useState({ visible: false, x: 0, y: 0, cell: null, isEmpty: false, canvasX: 0, canvasY: 0 });
-
+  // ── Interaction Logic ──────────────────────────────────────────────
   const stateRef = useRef({
-    isPanning: false,
-    isDragging: false,
-    spacePressed: false,
-    panStartX: 0,
-    panStartY: 0,
-    initialPanX: 0,
-    initialPanY: 0,
-    activeCell: null,
-    resizeEdge: null,
-    dragStartX: 0,
-    dragStartY: 0,
-    lastTouchDist: 0,
-    shouldAutoUpdateGrid: true
+    isPanning: false, isDragging: false, spacePressed: false,
+    panStartX: 0, panStartY: 0, initialPanX: 0, initialPanY: 0,
+    activeCell: null, resizeEdge: null, dragStartX: 0, dragStartY: 0,
+    lastTouchDist: 0, shouldAutoUpdateGrid: true
   });
 
+  const [contextMenu, setContextMenu] = useState({ visible: false, x: 0, y: 0, cell: null, isEmpty: false, canvasX: 0, canvasY: 0 });
+
+  // ── Custom Hooks ────────────────────────────────────────────────────
   const { handleDownloadAll, downloadSingle } = useGridExport({ 
     img, cells, prefix, namingType, exportFormat, isZip, setIsDownloading, setStatusMsg, contextMenu, setContextMenu 
   });
 
-  const [globalPadding, setGlobalPadding] = useState({ x: 0, y: 0 });
-  const [skipManual, setSkipManual] = useState(true);
-
   useGridCanvas({ canvasRef, img, cells, zoom, pan, namingType, showRulers, showGrid, cropBox: activeTool === 'crop' ? cropBox : null });
   usePreviewRender({ previewMode, previewIndex, img, cells, viewerCanvasRef, containerRef: previewRef });
 
-  // Initial Tutorial Check
-  useEffect(() => {
-    const hasSeenTutorial = localStorage.getItem('almanara-splitter-tutorial');
-    if (!hasSeenTutorial) {
-      setTimeout(() => setShowTutorial(true), 1000);
-      localStorage.setItem('almanara-splitter-tutorial', 'true');
-    }
-  }, []);
+  // ── Callbacks ───────────────────────────────────────────────────────
+  const fitToScreen = useCallback((loadedImg = img) => {
+    if (!loadedImg || !previewRef.current) return;
+    const pw = previewRef.current.clientWidth - 100;
+    const ph = previewRef.current.clientHeight - 100;
+    const ratio = Math.min(pw / loadedImg.width, ph / loadedImg.height);
+    setZoom(ratio > 0 ? ratio : 0.1);
+    setPan({ x: 0, y: 0 }); 
+  }, [img]);
 
-  // Live Auto Update for rows/cols
-  useEffect(() => {
-    if (img && stateRef.current.shouldAutoUpdateGrid) {
-      setCells(initGridCoords(img, cols, rows));
-    }
-  }, [cols, rows, img]);
-
-  // Apply Global Padding
-  useEffect(() => {
-    if (!img || cells.length === 0) return;
-    setCells(prev => prev.map(cell => {
-      if (skipManual && cell.isManual) return cell;
-      if (cell.originalW === undefined) return cell;
-      const px = globalPadding.x;
-      const py = globalPadding.y;
-      return {
-        ...cell,
-        x: cell.originalX + px,
-        y: cell.originalY + py,
-        w: Math.max(10, cell.originalW - px * 2),
-        h: Math.max(10, cell.originalH - py * 2)
-      };
-    }));
-  }, [globalPadding, skipManual, img]);
-
-  // Auto-sort cells
-  useEffect(() => {
-    if (cells.length === 0) return;
-    setCells(prev => {
-      const sorted = [...prev].sort((a, b) => {
-        const yDiff = a.y - b.y;
-        if (Math.abs(yDiff) > 10) return yDiff;
-        return a.x - b.x;
-      });
-      const remapped = sorted.map((c, i) => ({ ...c, id: i }));
-      const idOrderChanged = remapped.some((c, i) => c.id !== prev[i]?.id);
-      return idOrderChanged ? remapped : prev;
-    });
-  }, [cells.length]);
-
-  // ── Crop Helpers ──────────────────────────────────────────────
-  const initCropBox = (loadedImg = img) => {
+  const initCropBox = useCallback((loadedImg = img) => {
     if (!loadedImg) return;
     setCropBox({ x: 0, y: 0, w: loadedImg.width, h: loadedImg.height });
-  };
+  }, [img]);
 
-  const applyCrop = () => {
+  const applyCrop = useCallback(() => {
     if (!img || !cropBox) return;
     const { x, y, w, h } = cropBox;
     if (w < 10 || h < 10) return;
-    const offscreen = document.createElement('canvas');
-    offscreen.width = Math.round(w);
-    offscreen.height = Math.round(h);
-    const ctx = offscreen.getContext('2d');
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(w); canvas.height = Math.round(h);
+    const ctx = canvas.getContext('2d');
     ctx.drawImage(img, x, y, w, h, 0, 0, w, h);
     const newImg = new Image();
     newImg.onload = () => {
@@ -147,287 +143,105 @@ export default function GridSplitterTool() {
       setCells(initGridCoords(newImg, cols, rows));
       setCropBox(null);
       fitToScreen(newImg);
+      setActiveTool('select');
     };
-    newImg.src = offscreen.toDataURL();
-  };
+    newImg.src = canvas.toDataURL();
+  }, [img, cropBox, cols, rows, fitToScreen, setImg, setImgInfo, setCells]);
 
-  // Intercept setActiveTool to apply crop when switching away
   const handleSetActiveTool = (tool) => {
-    if (activeTool === 'crop' && tool !== 'crop') {
-      applyCrop();
-    }
-    if (tool === 'crop' && activeTool !== 'crop') {
-      initCropBox();
-    }
+    if (activeTool === 'crop' && tool !== 'crop') applyCrop();
+    if (tool === 'crop' && activeTool !== 'crop') initCropBox();
     setActiveTool(tool);
   };
-  // ────────────────────────────────────────────────────────────────
 
-  const fitToScreen = (loadedImg = img) => {
-    if (!loadedImg || !previewRef.current) return;
-    if (previewMode) {
-      setPreviewPan({ x: 0, y: 0 });
-      setPreviewZoom(1);
-      return;
-    }
-    const pw = previewRef.current.clientWidth;
-    const ph = previewRef.current.clientHeight;
-    const ratio = Math.min((pw - 60) / loadedImg.width, (ph - 60) / loadedImg.height);
-    setZoom(ratio > 0 ? ratio : 0.1);
-    setPan({ x: 0, y: 0 }); 
-  };
-
-  const handleFile = (file) => {
-    if (!file || !file.type.startsWith('image/')) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const tempImg = new Image();
-      tempImg.onload = () => {
-        setImg(tempImg);
-        setImgInfo(`${tempImg.width}x${tempImg.height}px`);
-        setPrefix(file.name.split('.')[0]);
-        const fmt = file.type.split('/')[1] || 'png';
-        setExportFormat(fmt === 'jpeg' ? 'jpg' : fmt);
-        fitToScreen(tempImg);
-        setCells(initGridCoords(tempImg, cols, rows));
-      };
-      tempImg.src = ev.target.result;
+  // ── Global Events ───────────────────────────────────────────────────
+  useEffect(() => {
+    const onDown = (e) => {
+      if (e.code === 'Space') { e.preventDefault(); stateRef.current.spacePressed = true; setSpacePressed(true); }
+      if (e.code === 'Enter' && activeTool === 'crop') applyCrop();
+      if (e.code === 'Escape' && activeTool === 'crop') { setCropBox(null); setActiveTool('select'); }
     };
-    reader.readAsDataURL(file);
-  };
-
-  const handleDragOver = (e) => { e.preventDefault(); setIsDragOver(true); };
-  const handleDragLeave = () => setIsDragOver(false);
-  const handleDrop = (e) => {
-    e.preventDefault();
-    setIsDragOver(false);
-    if (e.dataTransfer.files?.[0]) handleFile(e.dataTransfer.files[0]);
-  };
-
-  const handleResetCell = (cellId) => {
-    setCells(prev => prev.map(c => {
-      if (String(c.id) === String(cellId)) {
-        return {
-          ...c,
-          x: c.originalX ?? c.x,
-          y: c.originalY ?? c.y,
-          w: c.originalW ?? c.w,
-          h: c.originalH ?? c.h,
-          isManual: false
-        };
-      }
-      return c;
-    }));
-    setContextMenu(prev => ({ ...prev, visible: false }));
-  };
-
-  const handleResetAll = () => {
-    setGlobalPadding({ x: 0, y: 0 });
-    setCells(prev => prev.map(c => ({
-      ...c,
-      x: c.originalX ?? c.x,
-      y: c.originalY ?? c.y,
-      w: c.originalW ?? c.w,
-      h: c.originalH ?? c.h,
-      isManual: false
-    })));
-    setContextMenu(prev => ({ ...prev, visible: false }));
-  };
+    const onUp = (e) => {
+      if (e.code === 'Space') { stateRef.current.spacePressed = false; setSpacePressed(false); }
+    };
+    window.addEventListener('keydown', onDown);
+    window.addEventListener('keyup', onUp);
+    return () => { window.removeEventListener('keydown', onDown); window.removeEventListener('keyup', onUp); };
+  }, [activeTool, applyCrop]);
 
   const getCanvasCoords = (e) => getCanvasCoordsUtil(e, img, canvasRef, previewRef, zoom);
   const findEdgeHit = (x, y) => findEdgeHitUtil(x, y, img, cells, zoom);
 
-  // Touch Support
-  const handleTouchStart = (e) => {
-    if (e.touches.length === 1) {
-      const touch = e.touches[0];
-      handleMouseDown({ 
-        clientX: touch.clientX, 
-        clientY: touch.clientY, 
-        button: 0, 
-        preventDefault: () => e.preventDefault() 
-      });
-    } else if (e.touches.length === 2) {
-      const dist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
-      stateRef.current.lastTouchDist = dist;
+  const onMouseMove = useCallback((e) => {
+    const cx = e.clientX || e.touches?.[0]?.clientX;
+    const cy = e.clientY || e.touches?.[0]?.clientY;
+    if (!cx || !cy) return;
+
+    if (activeTool === 'picker') {
+      const { canvasX, canvasY } = getCanvasCoords({ clientX: cx, clientY: cy });
+      const ctx = canvasRef.current?.getContext('2d');
+      if (ctx) {
+        const pixel = ctx.getImageData(canvasX, canvasY, 1, 1).data;
+        const hex = `#${((1 << 24) + (pixel[0] << 16) + (pixel[1] << 8) + pixel[2]).toString(16).slice(1)}`;
+        setStatusMsg(`اللون المختار: ${hex} (RGB: ${pixel[0]}, ${pixel[1]}, ${pixel[2]})`);
+      }
+      return;
     }
-  };
 
-  const handleTouchMove = (e) => {
-    if (e.touches.length === 1) {
-      const touch = e.touches[0];
-      // Simulate mouse move for panning/dragging
-      // ... (global listener will handle it if we emit window events, but let's do it directly)
-    } else if (e.touches.length === 2) {
-      const dist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
-      const delta = dist / stateRef.current.lastTouchDist;
-      stateRef.current.lastTouchDist = dist;
-      if (previewMode) setPreviewZoom(z => Math.max(0.05, Math.min(15, z * delta)));
-      else setZoom(z => Math.max(0.05, Math.min(15, z * delta)));
+    if (stateRef.current.isPanning) {
+      const dx = cx - stateRef.current.panStartX;
+      const dy = cy - stateRef.current.panStartY;
+      if (previewMode) setPreviewPan({ x: stateRef.current.initialPanX + dx, y: stateRef.current.initialPanY + dy });
+      else setPan({ x: stateRef.current.initialPanX + dx, y: stateRef.current.initialPanY + dy });
+      return;
     }
-  };
 
-  // Event Handlers
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if(e.code === 'Space') {
-        e.preventDefault();
-        stateRef.current.spacePressed = true;
-        setSpacePressed(true);
-        if(previewRef.current && activeTool !== 'pan') previewRef.current.style.cursor = 'grab';
+    if (previewMode) return;
+    const { canvasX, canvasY } = getCanvasCoords({ clientX: cx, clientY: cy });
+
+    // Cursors
+    if (!stateRef.current.spacePressed && activeTool === 'select' && previewRef.current && !stateRef.current.isDragging) {
+      const hit = findEdgeHit(canvasX, canvasY);
+      if (hit) {
+        if (hit.edge === 'left' || hit.edge === 'right') previewRef.current.style.cursor = 'ew-resize';
+        else if (hit.edge === 'top' || hit.edge === 'bottom') previewRef.current.style.cursor = 'ns-resize';
+        else previewRef.current.style.cursor = hit.edge === 'top-left' || hit.edge === 'bottom-right' ? 'nwse-resize' : 'nesw-resize';
+      } else previewRef.current.style.cursor = 'default';
+    }
+
+    if (!stateRef.current.isDragging || !stateRef.current.activeCell) return;
+    const dx = canvasX - stateRef.current.dragStartX;
+    const dy = canvasY - stateRef.current.dragStartY;
+    const { activeCell, resizeEdge, initialCell } = stateRef.current;
+
+    setCells(prev => prev.map(c => {
+      if (c.id === activeCell.id) {
+        let nc = { ...c, isManual: true };
+        if (resizeEdge.includes('right')) nc.w = Math.min(Math.max(10, initialCell.w + dx), img.width - initialCell.x);
+        if (resizeEdge.includes('left')) { nc.x = Math.max(0, Math.min(initialCell.x + dx, initialCell.x + initialCell.w - 10)); nc.w = initialCell.x + initialCell.w - nc.x; }
+        if (resizeEdge.includes('bottom')) nc.h = Math.min(Math.max(10, initialCell.h + dy), img.height - initialCell.y);
+        if (resizeEdge.includes('top')) { nc.y = Math.max(0, Math.min(initialCell.y + dy, initialCell.y + initialCell.h - 10)); nc.h = initialCell.y + initialCell.h - nc.y; }
+        return nc;
       }
-      // Apply crop on Enter
-      if (e.code === 'Enter' && activeTool === 'crop') {
-        e.preventDefault();
-        applyCrop();
-        setActiveTool('select');
-      }
-      // Cancel crop on Escape
-      if (e.code === 'Escape' && activeTool === 'crop') {
-        setCropBox(null);
-        setActiveTool('select');
-      }
-    };
-    const handleKeyUp = (e) => {
-      if(e.code === 'Space') {
-        stateRef.current.spacePressed = false;
-        setSpacePressed(false);
-        if(previewRef.current && activeTool !== 'pan') previewRef.current.style.cursor = 'default';
-      }
-    };
-    const handleGlobalMouseUp = () => {
-      stateRef.current.isPanning = false;
-      stateRef.current.isDragging = false;
-      stateRef.current.activeCell = null;
-      stateRef.current.resizeEdge = null;
-      if(previewRef.current && (activeTool === 'pan' || stateRef.current.spacePressed)) {
-        previewRef.current.style.cursor = 'grab';
-      }
-    };
+      return c;
+    }));
+  }, [img, activeTool, previewMode, zoom, getCanvasCoords, findEdgeHit]);
 
-    const handleGlobalMouseMove = (e) => {
-      const clientX = e.clientX || e.touches?.[0]?.clientX;
-      const clientY = e.clientY || e.touches?.[0]?.clientY;
-      if (!clientX || !clientY) return;
-
-      const { canvasX, canvasY } = getCanvasCoords({ clientX, clientY });
-
-      if (stateRef.current.isPanning) {
-        const dx = clientX - stateRef.current.panStartX;
-        const dy = clientY - stateRef.current.panStartY;
-        if (previewMode) {
-          setPreviewPan({ x: stateRef.current.initialPanX + dx, y: stateRef.current.initialPanY + dy });
-        } else {
-          setPan({ x: stateRef.current.initialPanX + dx, y: stateRef.current.initialPanY + dy });
-        }
-        return;
-      }
-
-      if (previewMode) return;
-
-      // Cursor for edge hit
-      if (!stateRef.current.spacePressed && activeTool === 'select' && previewRef.current && !stateRef.current.isDragging) {
-        const hit = findEdgeHit(canvasX, canvasY);
-        if (hit) {
-          if (hit.edge === 'left' || hit.edge === 'right') previewRef.current.style.cursor = 'ew-resize';
-          else if (hit.edge === 'top' || hit.edge === 'bottom') previewRef.current.style.cursor = 'ns-resize';
-          else if (hit.edge.includes('-')) previewRef.current.style.cursor = hit.edge === 'top-left' || hit.edge === 'bottom-right' ? 'nwse-resize' : 'nesw-resize';
-        } else {
-          previewRef.current.style.cursor = 'default';
-        }
-      }
-
-      if (!stateRef.current.isDragging || !stateRef.current.activeCell) return;
-
-      const dx = canvasX - stateRef.current.dragStartX;
-      const dy = canvasY - stateRef.current.dragStartY;
-      const { activeCell, resizeEdge, initialCell } = stateRef.current;
-
-      setCells(prev => prev.map(c => {
-        if (c.id === activeCell.id) {
-          let nc = { ...c, isManual: true };
-          if (resizeEdge.includes('right')) nc.w = Math.min(Math.max(10, initialCell.w + dx), img.width - initialCell.x);
-          if (resizeEdge.includes('left')) {
-            nc.x = Math.max(0, Math.min(initialCell.x + dx, initialCell.x + initialCell.w - 10));
-            nc.w = initialCell.x + initialCell.w - nc.x;
-          }
-          if (resizeEdge.includes('bottom')) nc.h = Math.min(Math.max(10, initialCell.h + dy), img.height - initialCell.y);
-          if (resizeEdge.includes('top')) {
-            nc.y = Math.max(0, Math.min(initialCell.y + dy, initialCell.y + initialCell.h - 10));
-            nc.h = initialCell.y + initialCell.h - nc.y;
-          }
-
-          // Magnetic Snapping
-          if (!e.altKey) {
-            const snapThreshold = 15 / zoom;
-            const xTargets = [0, img.width];
-            const yTargets = [0, img.height];
-            prev.forEach(other => {
-              if (other.id === c.id) return;
-              xTargets.push(other.x, other.x + other.w);
-              yTargets.push(other.y, other.y + other.h);
-            });
-            const getClosest = (val, targets) => {
-              let closest = val;
-              let minDiff = snapThreshold;
-              targets.forEach(t => {
-                const diff = Math.abs(val - t);
-                if (diff < minDiff) { minDiff = diff; closest = t; }
-              });
-              return closest;
-            };
-
-            if (resizeEdge.includes('left')) { nc.x = getClosest(nc.x, xTargets); nc.w = initialCell.x + initialCell.w - nc.x; }
-            if (resizeEdge.includes('right')) { const r = getClosest(nc.x + nc.w, xTargets); nc.w = Math.max(10, r - nc.x); }
-            if (resizeEdge.includes('top')) { nc.y = getClosest(nc.y, yTargets); nc.h = initialCell.y + initialCell.h - nc.y; }
-            if (resizeEdge.includes('bottom')) { const b = getClosest(nc.y + nc.h, yTargets); nc.h = Math.max(10, b - nc.y); }
-            
-            nc.x = Math.max(0, Math.min(nc.x, img.width - nc.w));
-            nc.y = Math.max(0, Math.min(nc.y, img.height - nc.h));
-          }
-
-          return nc;
-        }
-        return c;
-      }));
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
-    window.addEventListener('mousemove', handleGlobalMouseMove);
-    window.addEventListener('mouseup', handleGlobalMouseUp);
-    window.addEventListener('touchmove', handleGlobalMouseMove, { passive: false });
-    window.addEventListener('touchend', handleGlobalMouseUp);
-    
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
-      window.removeEventListener('mousemove', handleGlobalMouseMove);
-      window.removeEventListener('mouseup', handleGlobalMouseUp);
-      window.removeEventListener('touchmove', handleGlobalMouseMove);
-      window.removeEventListener('touchend', handleGlobalMouseUp);
-    };
-  }, [img, activeTool, previewMode, zoom, pan]);
-
-  const handleMouseDown = (e) => {
-    const clientX = e.clientX || e.touches?.[0]?.clientX;
-    const clientY = e.clientY || e.touches?.[0]?.clientY;
-    if (!clientX || !clientY) return;
-
+  const onMouseDown = useCallback((e) => {
+    const cx = e.clientX || e.touches?.[0]?.clientX;
+    const cy = e.clientY || e.touches?.[0]?.clientY;
     if (contextMenu.visible) setContextMenu({ ...contextMenu, visible: false });
     if (activeTool === 'pan' || stateRef.current.spacePressed || e.button === 1) {
       stateRef.current.isPanning = true;
-      stateRef.current.panStartX = clientX;
-      stateRef.current.panStartY = clientY;
+      setIsPanning(true);
+      stateRef.current.panStartX = cx; stateRef.current.panStartY = cy;
       stateRef.current.initialPanX = previewMode ? previewPan.x : pan.x;
       stateRef.current.initialPanY = previewMode ? previewPan.y : pan.y;
-      if (previewRef.current) previewRef.current.style.cursor = 'grabbing';
       return;
     }
-    // Crop tool drag on overlay handles is handled by the overlay itself
     if (activeTool === 'crop') return;
     if (!previewMode && activeTool === 'select') {
-      const { canvasX, canvasY } = getCanvasCoords({ clientX, clientY });
+      const { canvasX, canvasY } = getCanvasCoords({ clientX: cx, clientY: cy });
       const hit = findEdgeHit(canvasX, canvasY);
       if (hit) {
         stateRef.current.isDragging = true;
@@ -438,173 +252,101 @@ export default function GridSplitterTool() {
         stateRef.current.dragStartY = canvasY;
       }
     }
-  };
+  }, [activeTool, contextMenu, previewMode, previewPan, pan, getCanvasCoords, findEdgeHit]);
 
-  const handleContextMenu = (e) => {
-    e.preventDefault();
-    if (!img || activeTool === 'pan') return;
-    const { canvasX, canvasY } = getCanvasCoords(e);
-    if (canvasX < 0 || canvasY < 0 || canvasX > img.width || canvasY > img.height) return;
-    const cell = cells.find(c => canvasX >= c.x && canvasX <= c.x + c.w && canvasY >= c.y && canvasY <= c.y + c.h);
-    setContextMenu({ visible: true, x: e.clientX, y: e.clientY, cell, isEmpty: !cell, canvasX, canvasY });
-  };
+  const onMouseUp = useCallback(() => {
+    stateRef.current.isPanning = false;
+    setIsPanning(false);
+    stateRef.current.isDragging = false;
+  }, []);
 
-  const addCellHere = () => {
-    const cw = img.width / cols, ch = img.height / rows;
-    const gx = Math.floor(contextMenu.canvasX / cw) * cw, gy = Math.floor(contextMenu.canvasY / ch) * ch;
-    setCells(prev => [...prev, { id: Date.now(), x: gx, y: gy, w: cw, h: ch, originalX: gx, originalY: gy, originalW: cw, originalH: ch, isManual: true }]);
-    setContextMenu({ ...contextMenu, visible: false });
-  };
+  useEffect(() => {
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+    return () => { window.removeEventListener('mousemove', onMouseMove); window.removeEventListener('mouseup', onMouseUp); };
+  }, [onMouseMove, onMouseUp]);
 
   return (
     <div className={styles.container}>
       {statusMsg && <div className={styles.statusOverlay}>{statusMsg}</div>}
-      {showHelpModal && <HelpModal onClose={() => setShowHelpModal(false)} onStartTutorial={() => { setShowHelpModal(false); setShowTutorial(true); }} />}
-      {showTutorial && <TutorialOverlay onClose={() => setShowTutorial(false)} />}
-
       <div className={styles.mainLayout}>
+        
+        {/* Sidebar */}
         <Sidebar 
-          isDragOver={isDragOver} handleDragOver={handleDragOver} handleDragLeave={handleDragLeave} handleDrop={handleDrop} handleFile={handleFile}
-          cols={cols} setCols={setCols} rows={rows} setRows={setRows} prefix={prefix} setPrefix={setPrefix} namingType={namingType} setNamingType={setNamingType}
-          exportFormat={exportFormat} setExportFormat={setExportFormat}
+          cols={cols} setCols={setCols} rows={rows} setRows={setRows} prefix={prefix} setPrefix={setPrefix} 
+          namingType={namingType} setNamingType={setNamingType} exportFormat={exportFormat} setExportFormat={setExportFormat}
           isZip={isZip} setIsZip={setIsZip} img={img} isDownloading={isDownloading} handleDownloadAll={handleDownloadAll}
-          setShowHelpModal={setShowHelpModal} globalPadding={globalPadding} setGlobalPadding={setGlobalPadding} skipManual={skipManual} setSkipManual={setSkipManual}
-          handleResetAll={handleResetAll} setShowTutorial={setShowTutorial}
+          setShowHelp={setShowHelp} globalPadding={globalPadding} setGlobalPadding={setGlobalPadding} 
+          skipManual={skipManual} setSkipManual={setSkipManual} handleResetAll={() => setCells(initGridCoords(img, cols, rows))} 
+          setShowTutorial={setShowTutorial} handleFile={handleFile}
         />
 
+        {/* Floating Toolbar */}
         <FloatingToolbar
-          activeTool={activeTool} setActiveTool={handleSetActiveTool} showRulers={showRulers} setShowRulers={setShowRulers}
-          showGrid={showGrid} setShowGrid={setShowGrid} hasCells={cells.length > 0} previewMode={previewMode}
-          setPreviewMode={setPreviewMode} setPreviewIndex={setPreviewIndex} fitToScreen={fitToScreen}
-          isSpacePressed={spacePressed}
+          activeTool={activeTool} setActiveTool={handleSetActiveTool} hasCells={cells.length > 0} 
+          previewMode={previewMode} setPreviewMode={setPreviewMode} 
+          setPreviewIndex={setPreviewIndex}
+          showRulers={showRulers} setShowRulers={setShowRulers}
+          showGrid={showGrid} setShowGrid={setShowGrid}
+          fitToScreen={fitToScreen}
+          isSpacePressed={spacePressed} color="var(--c1)"
         />
 
+        {/* Workspace */}
         <div 
           className={styles.previewArea} ref={previewRef} 
-          onMouseDown={handleMouseDown} 
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onContextMenu={handleContextMenu}
+          onMouseDown={onMouseDown} 
+          onContextMenu={(e) => {
+            e.preventDefault(); if (!img) return;
+            const { canvasX, canvasY } = getCanvasCoords(e);
+            const cell = cells.find(c => canvasX >= c.x && canvasX <= c.x + c.w && canvasY >= c.y && canvasY <= c.y + c.h);
+            setContextMenu({ visible: true, x: e.clientX, y: e.clientY, cell, canvasX, canvasY });
+          }}
           onWheel={(e) => {
             if(!img) return;
             const delta = e.deltaY > 0 ? 0.9 : 1.1;
             if (previewMode) setPreviewZoom(z => Math.max(0.05, Math.min(15, z * delta)));
             else setZoom(z => Math.max(0.05, Math.min(15, z * delta)));
           }}
-          onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}
+          style={{ cursor: isPanning || spacePressed ? 'grabbing' : 'default' }}
         >
+
           <div className={styles.canvasWrapper} style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})` }}>
             <canvas ref={canvasRef} className={styles.canvas} />
-
-            {/* Crop Overlay */}
-            {activeTool === 'crop' && img && cropBox && (() => {
-              const cx = cropBox.x * zoom;
-              const cy = cropBox.y * zoom;
-              const cw = cropBox.w * zoom;
-              const ch = cropBox.h * zoom;
-              const HANDLE = 8;
-
-              const startCropDrag = (handle, e) => {
-                e.stopPropagation();
-                e.preventDefault();
-                const startX = e.clientX;
-                const startY = e.clientY;
-                const startBox = { ...cropBox };
-                const onMove = (me) => {
-                  const dx = (me.clientX - startX) / zoom;
-                  const dy = (me.clientY - startY) / zoom;
-                  setCropBox(prev => {
-                    let { x, y, w, h } = startBox;
-                    const minSize = 20;
-                    if (handle === 'move') { x = Math.max(0, Math.min(img.width - w, x + dx)); y = Math.max(0, Math.min(img.height - h, y + dy)); }
-                    if (handle.includes('right'))  { w = Math.max(minSize, Math.min(img.width - x, w + dx)); }
-                    if (handle.includes('bottom')) { h = Math.max(minSize, Math.min(img.height - y, h + dy)); }
-                    if (handle.includes('left'))   { const nx = Math.max(0, Math.min(x + w - minSize, x + dx)); w = x + w - nx; x = nx; }
-                    if (handle.includes('top'))    { const ny = Math.max(0, Math.min(y + h - minSize, y + dy)); h = y + h - ny; y = ny; }
-                    return { x, y, w, h };
-                  });
-                };
-                const onUp = () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
-                window.addEventListener('mousemove', onMove);
-                window.addEventListener('mouseup', onUp);
-              };
-
-              const handles = [
-                { id: 'top-left',     style: { top: cy - HANDLE, left: cx - HANDLE, cursor: 'nwse-resize' } },
-                { id: 'top-right',    style: { top: cy - HANDLE, left: cx + cw - HANDLE, cursor: 'nesw-resize' } },
-                { id: 'bottom-left',  style: { top: cy + ch - HANDLE, left: cx - HANDLE, cursor: 'nesw-resize' } },
-                { id: 'bottom-right', style: { top: cy + ch - HANDLE, left: cx + cw - HANDLE, cursor: 'nwse-resize' } },
-                { id: 'top',    style: { top: cy - HANDLE, left: cx + cw / 2 - HANDLE, cursor: 'ns-resize' } },
-                { id: 'bottom', style: { top: cy + ch - HANDLE, left: cx + cw / 2 - HANDLE, cursor: 'ns-resize' } },
-                { id: 'left',   style: { top: cy + ch / 2 - HANDLE, left: cx - HANDLE, cursor: 'ew-resize' } },
-                { id: 'right',  style: { top: cy + ch / 2 - HANDLE, left: cx + cw - HANDLE, cursor: 'ew-resize' } },
-              ];
-
-              return (
-                <div className={styles.cropOverlay} style={{ width: img.width * zoom, height: img.height * zoom }}>
-                  {/* Dark mask */}
-                  <svg width={img.width * zoom} height={img.height * zoom} style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
-                    <defs>
-                      <mask id="cropMask">
-                        <rect width="100%" height="100%" fill="white" />
-                        <rect x={cx} y={cy} width={cw} height={ch} fill="black" />
-                      </mask>
-                    </defs>
-                    <rect width="100%" height="100%" fill="rgba(0,0,0,0.55)" mask="url(#cropMask)" />
-                    <rect x={cx} y={cy} width={cw} height={ch} fill="none" stroke="white" strokeWidth="1.5" strokeDasharray="6 3" />
-                    {/* Rule of thirds lines */}
-                    <line x1={cx + cw/3} y1={cy} x2={cx + cw/3} y2={cy + ch} stroke="rgba(255,255,255,0.3)" strokeWidth="0.8" />
-                    <line x1={cx + 2*cw/3} y1={cy} x2={cx + 2*cw/3} y2={cy + ch} stroke="rgba(255,255,255,0.3)" strokeWidth="0.8" />
-                    <line x1={cx} y1={cy + ch/3} x2={cx + cw} y2={cy + ch/3} stroke="rgba(255,255,255,0.3)" strokeWidth="0.8" />
-                    <line x1={cx} y1={cy + 2*ch/3} x2={cx + cw} y2={cy + 2*ch/3} stroke="rgba(255,255,255,0.3)" strokeWidth="0.8" />
-                  </svg>
-                  {/* Move handle (inner box) */}
-                  <div
-                    style={{ position: 'absolute', left: cx, top: cy, width: cw, height: ch, cursor: 'move' }}
-                    onMouseDown={(e) => startCropDrag('move', e)}
-                  />
-                  {/* Corner & Edge handles */}
-                  {handles.map(h => (
-                    <div key={h.id}
-                      onMouseDown={(e) => startCropDrag(h.id, e)}
-                      style={{
-                        position: 'absolute', width: HANDLE * 2, height: HANDLE * 2,
-                        background: 'white', border: '2px solid rgba(0,0,0,0.5)',
-                        borderRadius: '3px', boxShadow: '0 0 4px rgba(0,0,0,0.6)',
-                        ...h.style
-                      }}
-                    />
-                  ))}
-                  {/* Info badge */}
-                  <div style={{
-                    position: 'absolute', left: cx, top: cy - 28,
-                    background: 'rgba(0,0,0,0.8)', color: '#fff',
-                    padding: '2px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 700,
-                    pointerEvents: 'none', whiteSpace: 'nowrap'
-                  }}>
-                    {Math.round(cropBox.w)} × {Math.round(cropBox.h)} — Enter للتطبيق · Esc للإلغاء
-                  </div>
-                </div>
-              );
-            })()}
+            
+            {activeTool === 'crop' && (
+              <CropToolOverlay 
+                img={img} cropBox={cropBox} setCropBox={setCropBox} zoom={zoom} 
+                applyCrop={applyCrop} onCancel={() => { setCropBox(null); setActiveTool('select'); }} 
+              />
+            )}
           </div>
 
           {img && <div className={styles.canvasImgInfo}>{imgInfo}</div>}
 
           <PreviewOverlay
             previewMode={previewMode} setPreviewMode={setPreviewMode} previewIndex={previewIndex} setPreviewIndex={setPreviewIndex}
-            cells={cells} setCells={setCells} showRulers={showRulers} activeTool={activeTool} viewerCanvasRef={viewerCanvasRef}
+            cells={cells} setCells={setCells} showRulers={true} activeTool={activeTool} viewerCanvasRef={viewerCanvasRef}
             previewPan={previewPan} previewZoom={previewZoom} img={img}
           />
 
           <ContextMenu 
-            contextMenu={contextMenu} setContextMenu={setContextMenu} addCellHere={addCellHere}
-            downloadSingle={downloadSingle} deleteCell={() => { setCells(prev => prev.filter(c => c.id !== contextMenu.cell.id)); setContextMenu({ ...contextMenu, visible: false }); }}
-            openInViewer={() => { const idx = cells.findIndex(c => c.id === contextMenu.cell.id); if(idx !== -1) { setPreviewIndex(idx); setPreviewMode(true); } setContextMenu({ ...contextMenu, visible: false }); }}
-            previewMode={previewMode} handleResetCell={handleResetCell}
+            contextMenu={contextMenu} setContextMenu={setContextMenu} downloadSingle={downloadSingle}
+            handleResetCell={(id) => setCells(prev => prev.map(c => c.id === id ? { ...c, x: c.originalX, y: c.originalY, w: c.originalW, h: c.originalH, isManual: false } : c))}
+            deleteCell={() => setCells(prev => prev.filter(c => c.id !== contextMenu.cell.id))}
           />
-
         </div>
+
+        {/* Library Panel */}
+        <GridImageLibrary 
+          library={library} currentImg={img} setImg={setImg} setImgInfo={setImgInfo} 
+          setPrefix={setPrefix} setCells={setCells} cols={cols} rows={rows} fitToScreen={fitToScreen}
+        />
+
+        {/* Overlays & Modals */}
+        <GenericTutorial show={showTutorial} onClose={() => setShowTutorial(false)} steps={gridTutorialSteps} />
+        <GenericHelpModal show={showHelp} onClose={() => setShowHelp(false)} title="دليل مقسم الصور" sections={gridHelpSections} />
+
       </div>
     </div>
   );

@@ -3,14 +3,61 @@ import {
   Maximize2, Move, Download, Trash2, 
   Settings, Zap, Image as ImageIcon, 
   Lock, Unlock, RefreshCw, X, Upload, Layers,
-  ChevronRight, ChevronLeft, Crop, Search, ZoomIn, ZoomOut, MousePointer2, Plus
+  ChevronRight, ChevronLeft, Crop, Search, ZoomIn, ZoomOut, MousePointer2, Plus, Info, Play
 } from 'lucide-react';
 import JSZip from 'jszip';
 import styles from './ImageResizer.module.css';
 import { useResizerCanvas } from './hooks/useResizerCanvas';
 import FloatingToolbar from '../GridSplitter/components/FloatingToolbar';
 
+// Shared components
+import GenericTutorial from '../../components/Shared/GenericTutorial';
+import GenericHelpModal from '../../components/Shared/GenericHelpModal';
+import { useToolOnboarding } from '../../components/Shared/useToolOnboarding';
+
+const resizerTutorialSteps = [
+  {
+    title: "مرحباً بك في أداة تغيير الحجم والقص!",
+    content: "هنا يمكنك ضبط أبعاد صورك بدقة متناهية أو قصها بنسب محددة.",
+    icon: <Maximize2 size={40} color="var(--c1)" />
+  },
+  {
+    title: "تغيير الأبعاد يدوياً",
+    content: "أدخل العرض والارتفاع المطلوبين في القائمة الجانبية. يمكنك قفل النسبة لضمان عدم تشوه الصورة.",
+    icon: <Settings size={40} color="var(--c2)" />
+  },
+  {
+    title: "قوالب القص الجاهزة",
+    content: "اختر من بين نسب القص العالمية مثل 16:9 لليوتيوب أو 1:1 لإنستغرام بضغطة زر.",
+    icon: <Crop size={40} color="var(--c1)" />
+  },
+  {
+    title: "التحكم في منطقة القص",
+    content: "اسحب حواف المربع فوق الصورة لتحديد المنطقة المطلوبة بدقة، ثم حمل النتيجة.",
+    icon: <MousePointer2 size={40} color="var(--c3)" />
+  }
+];
+
+const resizerHelpSections = [
+  {
+    title: "كيفية تغيير الحجم",
+    icon: <Maximize2 size={18} />,
+    content: "ارفع صورتك، ثم حدد الأبعاد المطلوبة من القائمة الجانبية. سيتغير مربع القص تلقائياً ليعكس الأبعاد الجديدة."
+  },
+  {
+    title: "قفل النسبة (Aspect Ratio)",
+    icon: <Lock size={18} />,
+    content: "عند تفعيل القفل، سيتغير العرض والارتفاع معاً بشكل متناسب للحفاظ على جودة وشكل الصورة الأصلي."
+  },
+  {
+    title: "المعالجة الدفعية",
+    icon: <Layers size={18} />,
+    content: "يمكنك رفع صور متعددة وتطبيق نفس إعدادات القص عليها جميعاً بضغطة زر واحدة من زر 'تطبيق على الكل'."
+  }
+];
+
 export default function ImageResizerTool() {
+  const { showTutorial, setShowTutorial, showHelp, setShowHelp } = useToolOnboarding('image-resizer');
   const [files, setFiles] = useState([]);
   const [activeIndex, setActiveIndex] = useState(0);
   const [targetWidth, setTargetWidth] = useState('');
@@ -267,6 +314,15 @@ export default function ImageResizerTool() {
     <div className={styles.container}>
       <div className={styles.mainLayout}>
         <aside className={styles.sidebar}>
+          <div style={{ display: 'flex', gap: '10px', marginBottom: '25px' }}>
+            <button onClick={() => setShowTutorial(true)} style={{ flex: 1, background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', padding: '10px', borderRadius: '12px', color: '#fff', fontSize: '0.7rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', cursor: 'pointer' }}>
+              <Play size={14} color="var(--c1)" /> الشرح التفاعلي
+            </button>
+            <button onClick={() => setShowHelp(true)} style={{ flex: 1, background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', padding: '10px', borderRadius: '12px', color: '#fff', fontSize: '0.7rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', cursor: 'pointer' }}>
+              <Info size={14} color="var(--c1)" /> التعليمات
+            </button>
+          </div>
+
           <div className={styles.dropzone} onClick={() => fileInputRef.current.click()}>
             <Upload size={32} color="var(--c4)" />
             <div className={styles.dropzoneText}>
@@ -352,6 +408,9 @@ export default function ImageResizerTool() {
         </div>
       </div>
       <input type="file" ref={fileInputRef} multiple hidden onChange={e => handleAddFiles(e.target.files)} />
+
+      <GenericTutorial show={showTutorial} onClose={() => setShowTutorial(false)} steps={resizerTutorialSteps} />
+      <GenericHelpModal show={showHelp} onClose={() => setShowHelp(false)} title="دليل أداة تغيير الحجم والقص" sections={resizerHelpSections} />
     </div>
   );
 }

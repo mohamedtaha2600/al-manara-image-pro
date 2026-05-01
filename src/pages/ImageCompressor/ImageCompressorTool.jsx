@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Upload, Download, Minimize2, Image as ImageIcon, Trash2, FolderOpen, Zap, Plus, Search } from 'lucide-react';
+import { Upload, Download, Minimize2, Image as ImageIcon, Trash2, FolderOpen, Zap, Plus, Search, MousePointer2, Play, Info, Settings } from 'lucide-react';
 import JSZip from 'jszip';
 import { useImageBatch } from './hooks/useImageBatch';
 import ImageCard from './components/ImageCard';
@@ -8,7 +8,54 @@ import FloatingToolbar from '../GridSplitter/components/FloatingToolbar';
 import { compressImage, formatBytes } from './utils/compressionUtils';
 import styles from './ImageCompressor.module.css';
 
+// Shared components
+import GenericTutorial from '../../components/Shared/GenericTutorial';
+import GenericHelpModal from '../../components/Shared/GenericHelpModal';
+import { useToolOnboarding } from '../../components/Shared/useToolOnboarding';
+
+const compressorTutorialSteps = [
+  {
+    title: "مرحباً بك في ضاغط الصور الاحترافي!",
+    content: "هنا يمكنك تقليل حجم صورك بنسبة تصل إلى 90% مع الحفاظ على جودتها.",
+    icon: <Minimize2 size={40} color="var(--c1)" />
+  },
+  {
+    title: "مستوى الضغط",
+    content: "تحكم في الجودة والمقاس من القائمة الجانبية. كلما قلت الجودة، صغر الحجم أكثر.",
+    icon: <Settings size={40} color="var(--c2)" />
+  },
+  {
+    title: "المعاينة المقارنة",
+    content: "شاهد الفرق بين الصورة الأصلية والمضغوطة لحظياً قبل التحميل للتأكد من الجودة.",
+    icon: <ImageIcon size={40} color="var(--c1)" />
+  },
+  {
+    title: "التحميل الذكي",
+    content: "يمكنك تحميل الصور فرادى أو في ملف ZIP واحد لكل المجموعة المعالجة.",
+    icon: <Download size={40} color="var(--c3)" />
+  }
+];
+
+const compressorHelpSections = [
+  {
+    title: "أفضل إعدادات للضغط",
+    icon: <Zap size={18} />,
+    content: "نوصي بجودة بين 70-80% للحصول على توازن مثالي بين حجم الملف ووضوح الصورة."
+  },
+  {
+    title: "تغيير المقاس (Scaling)",
+    icon: <Minimize2 size={18} />,
+    content: "تقليل أبعاد الصورة (Scale) يساهم بشكل كبير جداً في تصغير حجم الملف، خاصة للصور الملتقطة بكاميرات احترافية."
+  },
+  {
+    title: "صيغة WebP",
+    icon: <Info size={18} />,
+    content: "صيغة WebP هي الأفضل حالياً للإنترنت، فهي تعطي أحجاماً أقل بكثير من JPG بنفس الجودة."
+  }
+];
+
 export default function ImageCompressorTool() {
+  const { showTutorial, setShowTutorial, showHelp, setShowHelp } = useToolOnboarding('image-compressor');
   const { 
     images, 
     isProcessing: isProcessingGlobal, 
@@ -45,12 +92,13 @@ export default function ImageCompressorTool() {
   const [spacePressed, setSpacePressed] = useState(false);
 
   useEffect(() => {
-    const down = (e) => { if (e.code === 'Space') { e.preventDefault(); setSpacePressed(true); } };
+    const down = (e) => { if (e.code === 'Space' && e.target.tagName !== 'INPUT') { e.preventDefault(); setSpacePressed(true); } };
     const up = (e) => { if (e.code === 'Space') setSpacePressed(false); };
     window.addEventListener('keydown', down);
     window.addEventListener('keyup', up);
     return () => { window.removeEventListener('keydown', down); window.removeEventListener('keyup', up); };
   }, []);
+
   const fileInputRef = useRef(null);
   const folderInputRef = useRef(null);
 
@@ -142,10 +190,8 @@ export default function ImageCompressorTool() {
     }
   }, [images, activeImageId]);
 
-
   const activeImage = images.find(img => img.id === activeImageId);
 
-  // 🤖 Auto-detect preset when scale or active image changes
   useEffect(() => {
     if (!activeImage || !activeImage.width) {
       setActivePreset(null);
@@ -194,21 +240,27 @@ export default function ImageCompressorTool() {
     : 0;
 
   return (
-    <div className={styles.container} style={{height: 'calc(100vh - 64px)'}} onDragOver={handleDragOver} onDragLeave={() => setIsDragging(false)} onDrop={handleDrop}>
-      {isDragging && (
-        <div className={styles.dragOverlay}>
-          <Upload size={80} color="var(--c2)" />
-          <h2>ألقِ الصور هنا للإضافة</h2>
-        </div>
-      )}
-      
+    <div className={styles.container} onDragOver={handleDragOver} onDragLeave={() => setIsDragging(false)} onDrop={handleDrop}>
       {/* Hidden File Inputs */}
       <input type="file" id="fileInput" multiple accept="image/*" onChange={handleFileChange} style={{ display: 'none' }} />
       <input type="file" id="folderInput" webkitdirectory="true" directory="true" onChange={handleFileChange} style={{ display: 'none' }} />
       
       <div className={styles.mainLayout}>
-        {/* Sidebar */}
         <div className={styles.sidebar}>
+          <div className={styles.toolTitle}>
+            <ImageIcon size={22} />
+            <h3>ضاغط الصور الاحترافي</h3>
+          </div>
+
+          <div style={{ display: 'flex', gap: '10px', marginBottom: '25px' }}>
+            <button onClick={() => setShowTutorial(true)} style={{ flex: 1, background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', padding: '10px', borderRadius: '12px', color: '#fff', fontSize: '0.7rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', cursor: 'pointer' }}>
+              <Play size={14} color="var(--c1)" /> الشرح التفاعلي
+            </button>
+            <button onClick={() => setShowHelp(true)} style={{ flex: 1, background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', padding: '10px', borderRadius: '12px', color: '#fff', fontSize: '0.7rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', cursor: 'pointer' }}>
+              <Info size={14} color="var(--c1)" /> التعليمات
+            </button>
+          </div>
+
           {images.length === 0 && (
             <div className={styles.dropzone} onClick={() => document.getElementById('fileInput').click()}>
               <Upload size={32} color="var(--c2)" />
@@ -218,6 +270,7 @@ export default function ImageCompressorTool() {
               </div>
             </div>
           )}
+
           <div className={styles.sectionTitle} style={{ marginTop: images.length === 0 ? 0 : 10 }}>الإعدادات</div>
           
           <div className={styles.inputGroup}>
@@ -227,19 +280,7 @@ export default function ImageCompressorTool() {
 
           <div className={styles.inputGroup}>
             <label>المقاس: {Math.round(scale * 100)}%</label>
-            <input 
-              type="range" 
-              min="0.1" 
-              max="1" 
-              step="0.05" 
-              value={scale} 
-              onChange={(e) => {
-                setScale(parseFloat(e.target.value));
-                setActivePreset(null); // مسح الاختيار عند التعديل اليدوي
-              }} 
-              className={styles.rangeInput} 
-            />
-            
+            <input type="range" min="0.1" max="1" step="0.05" value={scale} onChange={(e) => { setScale(parseFloat(e.target.value)); setActivePreset(null); }} className={styles.rangeInput} />
             <div className={styles.presetGrid}>
               {resolutionPresets.map(preset => (
                 <button 
@@ -254,10 +295,7 @@ export default function ImageCompressorTool() {
                         const newScale = preset.width / img.width;
                         setScale(Math.min(Math.max(newScale, 0.1), 1));
                       };
-                    } else {
-                      // لو مفيش صورة، ممكن نثبت قيمة تقريبية أو نكتفي بتحديد الزرار
-                      setScale(preset.width / 1920); // افتراض Full HD كمرجع
-                    }
+                    } else { setScale(preset.width / 1920); }
                   }}
                 >
                   {preset.label}
@@ -275,7 +313,6 @@ export default function ImageCompressorTool() {
             </select>
           </div>
 
-          {/* 📊 Active Image Stats Card */}
           {activeImage && (
             <div className={styles.statsCard}>
               <div className={styles.statsTitle}>إحصائيات الصورة المختارة</div>
@@ -305,14 +342,9 @@ export default function ImageCompressorTool() {
           )}
 
           <div className={styles.sidebarActions}>
-            <button 
-              className={styles.btnMain} 
-              onClick={processBatch} 
-              disabled={isProcessingLocal || images.length === 0}
-            >
+            <button className={styles.btnMain} onClick={processBatch} disabled={isProcessingLocal || images.length === 0}>
               <Zap size={18} /> {isProcessingLocal ? 'جاري الضغط...' : 'بدء ضغط الكل'}
             </button>
-
             {showDownloadAll && (
               <button className={styles.btnDownloadAll} onClick={downloadAll}>
                 <Download size={18} /> تنزيل الكل (ZIP)
@@ -321,73 +353,63 @@ export default function ImageCompressorTool() {
           </div>
         </div>
 
-        <FloatingToolbar 
-          activeTool={activeTool}
-          setActiveTool={setActiveTool}
-          fitToScreen={() => {}}
-          color="var(--c2)"
-          isSpacePressed={spacePressed}
-        />
+        <div className={styles.rightContent}>
+          <div className={styles.topSection}>
+            <FloatingToolbar 
+              activeTool={activeTool}
+              setActiveTool={setActiveTool}
+              fitToScreen={() => {}}
+              color="var(--c2)"
+              isSpacePressed={spacePressed}
+              simpleMode={true}
+            />
 
-        <div className={styles.previewArea}>
-          {images.length === 0 ? (
-            <div className={styles.emptyState}>
-               <ImageIcon size={64} color="var(--c2)" opacity={0.2} />
-               <p>اختر صوراً للبدء في ضغطها ومعاينتها هنا</p>
+            <div className={styles.workspace}>
+              <div className={styles.workspacePattern} />
+              {images.length === 0 ? (
+                <div className={styles.emptyState}>
+                   <ImageIcon size={64} color="var(--c2)" opacity={0.2} />
+                   <p>اختر صوراً للبدء في ضغطها ومعاينتها هنا</p>
+                </div>
+              ) : (
+                <div className={styles.previewContainer}>
+                   {activeImage ? (
+                     <ComparisonView activeImage={activeImage} activeTool={activeTool} />
+                   ) : (
+                     <div className={styles.emptyCompBox}>اختر صورة من القائمة للمعاينة</div>
+                   )}
+                </div>
+              )}
             </div>
-          ) : (
-            <>
-              {/* 1. Preview Section (Top) */}
-              <div className={styles.previewTopSection}>
-                 {activeImage ? (
-                   <ComparisonView activeImage={activeImage} />
-                 ) : (
-                   <div className={styles.emptyCompBox}>اختر صورة من القائمة للمعاينة</div>
-                 )}
-              </div>
+          </div>
 
-              {/* 2. Gallery Section (Bottom) */}
-              <div className={styles.galleryBottomSection}>
+          {images.length > 0 && (
+            <div className={styles.bottomBar}>
+              <div className={styles.gallerySection}>
                 <div className={styles.listHeader}>
                   <div className={styles.headerLeft}>
                     <h3>قائمة الصور ({images.length})</h3>
-                    {totalSavings > 0 && (
-                      <span className={styles.savingBadge}>توفير: {totalSavings.toFixed(1)}%</span>
-                    )}
+                    {totalSavings > 0 && <span className={styles.savingBadge}>توفير: {totalSavings.toFixed(1)}%</span>}
                   </div>
 
                   <div className={styles.bulkBar}>
                     {selectedIds.length > 0 && (
                       <>
-                        <button className={styles.actionBtnMini} onClick={downloadSelected} title="تحميل المختار">
-                          <Download size={16} />
-                        </button>
-                        <button className={`${styles.actionBtnMini} ${styles.delete}`} onClick={deleteSelected} title="حذف المختار">
-                          <Trash2 size={16} />
-                        </button>
+                        <button className={styles.actionBtnMini} onClick={downloadSelected} title="تحميل المختار"><Download size={16} /></button>
+                        <button className={`${styles.actionBtnMini} ${styles.delete}`} onClick={deleteSelected} title="حذف المختار"><Trash2 size={16} /></button>
                         <span className={styles.selectionCount}>{selectedIds.length} مختارة</span>
                       </>
                     )}
-                    <div 
-                      className={`${styles.checkbox} ${selectedIds.length === images.length && images.length > 0 ? styles.checked : ''}`}
-                      onClick={selectAll}
-                      title="اختيار الكل"
-                    />
+                    <div className={`${styles.checkbox} ${selectedIds.length === images.length && images.length > 0 ? styles.checked : ''}`} onClick={selectAll} title="اختيار الكل" />
                   </div>
 
                   <div className={styles.headerRight}>
                     <div className={styles.searchBoxSmall}>
                       <Search size={14} />
-                      <input 
-                        type="text" 
-                        placeholder="بحث..." 
-                        value={searchQuery} 
-                        onChange={e => setSearchQuery(e.target.value)} 
-                      />
+                      <input type="text" placeholder="بحث..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
                     </div>
                     <button className={styles.addMoreBtn} onClick={() => document.getElementById('fileInput').click()}>
-                      <Plus size={16} />
-                      <span>إضافة</span>
+                      <Plus size={16} /><span>إضافة</span>
                     </button>
                   </div>
                 </div>
@@ -401,19 +423,12 @@ export default function ImageCompressorTool() {
                       className={`${styles.imageItem} ${activeImageId === img.id ? styles.active : ''} ${selectedIds.includes(img.id) ? styles.selected : ''}`}
                       onClick={() => setActiveImageId(img.id)}
                     >
-                      {/* Checkbox Overlay */}
-                      <div 
-                        className={`${styles.checkbox} ${selectedIds.includes(img.id) ? styles.checked : ''}`}
-                        style={{position: 'absolute', top: '8px', right: '8px', zIndex: 10}}
-                        onClick={(e) => toggleSelect(img.id, e)}
-                      />
-
+                      <div className={`${styles.checkbox} ${selectedIds.includes(img.id) ? styles.checked : ''}`} style={{position: 'absolute', top: '8px', right: '8px', zIndex: 10}} onClick={(e) => toggleSelect(img.id, e)} />
                       <div className={styles.cardThumb}>
                         <img src={img.originalUrl} alt={img.name} />
                         {img.status === 'processing' && <div className={styles.cardBadge} style={{background: '#ffa500'}}>...</div>}
                         {img.status === 'done' && <div className={styles.cardBadge}>-{img.savings}%</div>}
                       </div>
-
                       <div className={styles.cardInfo}>
                         <div className={styles.cardName}>{img.name}</div>
                         <div className={styles.cardSizes}>
@@ -421,23 +436,15 @@ export default function ImageCompressorTool() {
                           {img.status === 'done' && <span style={{color: 'var(--c1)'}}>{formatBytes(img.compressedSize)}</span>}
                         </div>
                       </div>
-
-                      {/* Hover Actions */}
                       <div className={styles.cardActions}>
-                        {img.status === 'done' && (
-                          <button className={styles.actionBtnMini} onClick={(e) => { e.stopPropagation(); downloadSelected(); }}>
-                            <Download size={14} />
-                          </button>
-                        )}
-                        <button className={`${styles.actionBtnMini} ${styles.delete}`} onClick={(e) => { e.stopPropagation(); setImages(prev => prev.filter(i => i.id !== img.id)); }}>
-                          <Trash2 size={14} />
-                        </button>
+                        {img.status === 'done' && <button className={styles.actionBtnMini} onClick={(e) => { e.stopPropagation(); downloadSingleImage(img); }}><Download size={14} /></button>}
+                        <button className={`${styles.actionBtnMini} ${styles.delete}`} onClick={(e) => { e.stopPropagation(); removeImage(img.id); }}><Trash2 size={14} /></button>
                       </div>
                     </div>
                   ))}
                 </div>
               </div>
-            </>
+            </div>
           )}
         </div>
       </div>
@@ -450,6 +457,9 @@ export default function ImageCompressorTool() {
           </div>
         </div>
       )}
+
+      <GenericTutorial show={showTutorial} onClose={() => setShowTutorial(false)} steps={compressorTutorialSteps} />
+      <GenericHelpModal show={showHelp} onClose={() => setShowHelp(false)} title="دليل ضاغط الصور الاحترافي" sections={compressorHelpSections} />
     </div>
   );
 }

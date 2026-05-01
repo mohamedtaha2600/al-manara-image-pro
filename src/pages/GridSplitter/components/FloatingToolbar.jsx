@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { MousePointer2, Hand, Ruler, Eye, Maximize, Grid, Crop } from 'lucide-react';
+import { MousePointer2, Hand, Ruler, Eye, Maximize, Grid, Crop, Pipette } from 'lucide-react';
 import styles from './FloatingToolbar.module.css';
 
 export default function FloatingToolbar({
@@ -28,7 +28,7 @@ export default function FloatingToolbar({
   return (
     <div className={styles.floatingToolbar} style={{'--tool-color': color}}>
       <button 
-        title="أداة التحديد والقص"
+        title="أداة التحديد"
         className={`${styles.toolBtn} ${activeTool === 'select' ? styles.active : ''}`}
         onClick={() => setActiveTool('select')}
       >
@@ -41,13 +41,26 @@ export default function FloatingToolbar({
       >
         <Hand size={20} />
       </button>
-      <button 
-        title="أداة الاقتصاص (Crop)"
-        className={`${styles.toolBtn} ${activeTool === 'crop' ? styles.active : ''}`}
-        onClick={() => setActiveTool('crop')}
-      >
-        <Crop size={20} />
-      </button>
+      {!simpleMode && (
+        <button 
+          title="أداة الاقتصاص (Crop)"
+          className={`${styles.toolBtn} ${activeTool === 'crop' ? styles.active : ''}`}
+          onClick={() => setActiveTool('crop')}
+        >
+          <Crop size={20} />
+        </button>
+      )}
+
+      {/* Eye Dropper / Color Picker */}
+      {!simpleMode && (
+        <button 
+          title="أداة القطارة (Eye Dropper) [Picker]"
+          className={`${styles.toolBtn} ${activeTool === 'picker' ? styles.active : ''}`}
+          onClick={() => setActiveTool('picker')}
+        >
+          <Pipette size={20} />
+        </button>
+      )}
 
       {!simpleMode && (
         <>

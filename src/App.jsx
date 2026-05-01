@@ -6,7 +6,8 @@ import ImageCompressor from './pages/ImageCompressor/ImageCompressorTool';
 import ImageConverter from './pages/ImageConverter/ImageConverterTool';
 import ImageResizer from './pages/ImageResizer/ImageResizerTool';
 import WatermarkTool from './pages/Watermark/WatermarkTool';
-import ImageMergerTool from './pages/ImageMerger/ImageMergerTool';
+import ColorExtractorTool from './pages/ColorExtractor/ColorExtractorTool';
+import ExifViewerTool from './pages/ExifViewer/ExifViewerTool';
 
 function App() {
   // Initialize state from LocalStorage or default
@@ -55,7 +56,7 @@ function App() {
       {/* Unified Navbar with Tabs */}
       <Navbar tabs={tabs} activeTab={activeTab} setActiveTab={setActiveTab} closeTab={closeTab} />
       
-      <div className="tab-content" style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
+      <div className="tab-content" style={{ flex: 1, position: 'relative', width: '100%', height: '100%', overflow: 'auto' }}>
         
         {/* We use display: block/none to preserve the state of components */}
         <div style={{ display: activeTab === 'home' ? 'block' : 'none', height: '100%' }}>
@@ -92,11 +93,19 @@ function App() {
           </div>
         )}
 
-        {tabs.some(t => t.id === 'image-merger') && (
-          <div style={{ display: activeTab === 'image-merger' ? 'block' : 'none', height: '100%' }}>
-            <ImageMergerTool />
+
+        {tabs.some(t => t.id === 'color-extractor') && (
+          <div style={{ display: activeTab === 'color-extractor' ? 'block' : 'none', height: '100%' }}>
+            <ColorExtractorTool />
           </div>
         )}
+
+        {tabs.some(t => t.id === 'exif-viewer') && (
+          <div style={{ display: activeTab === 'exif-viewer' ? 'block' : 'none', height: '100%' }}>
+            <ExifViewerTool />
+          </div>
+        )}
+
 
       </div>
     </div>

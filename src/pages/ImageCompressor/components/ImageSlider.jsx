@@ -2,10 +2,8 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { MousePointer2, Hand, ZoomIn, ZoomOut, Maximize, RotateCcw } from 'lucide-react';
 import styles from './ImageSlider.module.css';
 
-export default function ImageSlider({ before, after }) {
+export default function ImageSlider({ before, after, activeTool = 'select' }) {
   const [sliderPos, setSliderPos] = useState(50);
-  const [activeTool, setActiveTool] = useState('select'); // select, hand
-  const [prevTool, setPrevTool] = useState('select');
   const [zoom, setZoom] = useState(0.7);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
@@ -20,25 +18,6 @@ export default function ImageSlider({ before, after }) {
     setZoom(0.7);
     setOffset({ x: 0, y: 0 });
   };
-
-  // --- Keyboard Shortcuts ---
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.code === 'Space' && activeTool !== 'hand') {
-        setPrevTool(activeTool);
-        setActiveTool('hand');
-      }
-    };
-    const handleKeyUp = (e) => {
-      if (e.code === 'Space') setActiveTool(prevTool);
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
-    };
-  }, [activeTool, prevTool]);
 
   // --- Wheel Zoom ---
   const handleWheel = (e) => {
@@ -62,7 +41,7 @@ export default function ImageSlider({ before, after }) {
       if (containerRef.current) {
         containerRef.current.style.setProperty('--slider-pos', `${clampedPos}%`);
       }
-    } else if (activeTool === 'hand' && isDragging) {
+    } else if (activeTool === 'pan' && isDragging) {
       const clientX = e.type.includes('touch') ? e.touches[0].pageX : e.pageX;
       const clientY = e.type.includes('touch') ? e.touches[0].pageY : e.pageY;
       setOffset({
@@ -73,7 +52,7 @@ export default function ImageSlider({ before, after }) {
   }, [isResizing, activeTool, isDragging, dragStart]);
 
   const handleMouseDown = (e) => {
-    if (activeTool === 'hand') {
+    if (activeTool === 'pan') {
       setIsDragging(true);
       const clientX = e.type.includes('touch') ? e.touches[0].pageX : e.pageX;
       const clientY = e.type.includes('touch') ? e.touches[0].pageY : e.pageY;
@@ -90,38 +69,9 @@ export default function ImageSlider({ before, after }) {
   };
 
   return (
-    <div className={`${styles.canvasWrapper} ${activeTool === 'hand' ? styles.handToolActive : ''} ${isDragging ? styles.isDragging : ''}`}>
+    <div className={`${styles.canvasWrapper} ${activeTool === 'pan' ? styles.handToolActive : ''} ${isDragging ? styles.isDragging : ''}`}>
       {/* 🛠️ Vertical Toolbar */}
-      <div className={styles.verticalToolbar}>
-        <button 
-          className={`${styles.toolBtn} ${activeTool === 'select' ? styles.toolActive : ''}`}
-          onClick={() => setActiveTool('select')}
-          title="أداة التحديد (V)"
-        >
-          <MousePointer2 size={18} />
-        </button>
-        <button 
-          className={`${styles.toolBtn} ${activeTool === 'hand' ? styles.toolActive : ''}`}
-          onClick={() => setActiveTool('hand')}
-          title="أداة اليد (Space)"
-        >
-          <Hand size={18} />
-        </button>
-        <div className={styles.toolDivider} />
-        <button className={styles.toolBtn} onClick={() => setZoom(prev => Math.min(prev + 0.5, 10))} title="تكبير"><ZoomIn size={18} /></button>
-        <button className={styles.toolBtn} onClick={() => setZoom(prev => Math.max(prev - 0.5, 0.5))} title="تصغير"><ZoomOut size={18} /></button>
-        <button 
-          className={`${styles.toolBtn} ${isFlashing ? styles.flash : ''}`} 
-          onClick={() => {
-            resetView();
-            setIsFlashing(true);
-            setTimeout(() => setIsFlashing(false), 500);
-          }} 
-          title="إعادة الضبط"
-        >
-          <RotateCcw size={18} />
-        </button>
-      </div>
+      {/* Toolbar removed to simplify UI as requested */}
 
       <div 
         className={styles.canvasContainer} 

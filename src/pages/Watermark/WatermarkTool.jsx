@@ -3,14 +3,60 @@ import {
   Settings, Download, Trash2, Image as ImageIcon, 
   Type, Move, RefreshCw, Upload, Layers,
   ChevronRight, ChevronLeft, Droplets, AlignLeft,
-  AlignCenter, AlignRight, Grid, Layout, X, UploadCloud
+  AlignCenter, AlignRight, Grid as GridIcon, Layout, X, UploadCloud, MousePointer2, Info, Play
 } from 'lucide-react';
 import JSZip from 'jszip';
 import styles from './Watermark.module.css';
-import { useWatermarkCanvas } from './hooks/useWatermarkCanvas';
 import FloatingToolbar from '../GridSplitter/components/FloatingToolbar';
 
+// Shared components
+import GenericTutorial from '../../components/Shared/GenericTutorial';
+import GenericHelpModal from '../../components/Shared/GenericHelpModal';
+import { useToolOnboarding } from '../../components/Shared/useToolOnboarding';
+
+const watermarkTutorialSteps = [
+  {
+    title: "مرحباً بك في أداة العلامة المائية!",
+    content: "هنا يمكنك حماية صورك بإضافة شعارات أو نصوص مخصصة بكل سهولة.",
+    icon: <Droplets size={40} color="var(--c1)" />
+  },
+  {
+    title: "نص أم صورة؟",
+    content: "اختر بين إضافة نص مخصص (مع دعم الخطوط والألوان) أو رفع شعارك الخاص كصورة.",
+    icon: <Type size={40} color="var(--c2)" />
+  },
+  {
+    title: "التحكم الذكي",
+    content: "استخدم نقاط التثبيت (Anchors) لوضع العلامة في زوايا محددة، أو اسحبها يدوياً لأي مكان.",
+    icon: <MousePointer2 size={40} color="var(--c1)" />
+  },
+  {
+    title: "وضع التكرار (Tiling)",
+    content: "فعل وضع التكرار لتغطية الصورة كاملة بالعلامة المائية لحماية قصوى.",
+    icon: <GridIcon size={40} color="var(--c3)" />
+  }
+];
+
+const watermarkHelpSections = [
+  {
+    title: "كيفية إضافة العلامة",
+    icon: <Droplets size={18} />,
+    content: "ارفع صورك أولاً، ثم اختر نوع العلامة (نص أو صورة). يمكنك سحب العلامة مباشرة فوق الصورة لتغيير موقعها."
+  },
+  {
+    title: "تطبيق على الكل",
+    icon: <Layers size={18} />,
+    content: "إذا كنت تريد نفس الموقع والحجم لجميع الصور، اضغط 'تطبيق على الكل' لتوحيد الإعدادات فوراً."
+  },
+  {
+    title: "المعالجة الدفعية",
+    icon: <Download size={18} />,
+    content: "بعد ضبط الإعدادات، حدد الصور التي تريدها واضغط 'تنزيل المحدد'. سيقوم النظام بمعالجة جميع الصور وحفظها في ملف ZIP واحد."
+  }
+];
+
 export default function WatermarkTool() {
+  const { showTutorial, setShowTutorial, showHelp, setShowHelp } = useToolOnboarding('watermark-tool');
   const [files, setFiles] = useState([]);
   const [activeIndex, setActiveIndex] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -314,6 +360,15 @@ export default function WatermarkTool() {
     <div className={styles.container}>
       <div className={styles.mainLayout}>
         <aside className={styles.sidebar}>
+          <div style={{ display: 'flex', gap: '10px', marginBottom: '25px' }}>
+            <button onClick={() => setShowTutorial(true)} style={{ flex: 1, background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', padding: '10px', borderRadius: '12px', color: '#fff', fontSize: '0.7rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', cursor: 'pointer' }}>
+              <Play size={14} color="var(--c1)" /> الشرح التفاعلي
+            </button>
+            <button onClick={() => setShowHelp(true)} style={{ flex: 1, background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', padding: '10px', borderRadius: '12px', color: '#fff', fontSize: '0.7rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', cursor: 'pointer' }}>
+              <Info size={14} color="var(--c1)" /> التعليمات
+            </button>
+          </div>
+
           <div className={styles.sectionTitle}><Droplets size={20} /> خيارات العلامة</div>
           
           <div className={styles.tabGrid}>
@@ -469,9 +524,10 @@ export default function WatermarkTool() {
           </div>
         </div>
       </div>
-      <input type="file" ref={fileInputRef} multiple hidden onChange={e => handleAddFiles(e.target.files)} />
-      <input type="file" ref={watermarkInputRef} hidden onChange={handleWatermarkUpload} />
       <input type="file" ref={hybridLogoInputRef} hidden onChange={handleHybridLogoUpload} />
+
+      <GenericTutorial show={showTutorial} onClose={() => setShowTutorial(false)} steps={watermarkTutorialSteps} />
+      <GenericHelpModal show={showHelp} onClose={() => setShowHelp(false)} title="دليل أداة العلامة المائية" sections={watermarkHelpSections} />
     </div>
   );
 }

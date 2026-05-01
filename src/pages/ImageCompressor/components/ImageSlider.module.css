@@ -72,7 +72,7 @@
   100% { background: transparent; transform: scale(1); }
 }
 
-.container {
+.canvasContainer {
   position: relative;
   flex: 1;
   height: 100%;

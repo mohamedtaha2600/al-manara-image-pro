@@ -41,12 +41,17 @@ const steps = [
   }
 ];
 
-export default function TutorialOverlay({ onClose }) {
+export default function TutorialOverlay({ show, onClose }) {
   const [currentStep, setCurrentStep] = useState(0);
+
+  if (!show) return null;
 
   const nextStep = () => {
     if (currentStep < steps.length - 1) setCurrentStep(currentStep + 1);
-    else onClose();
+    else {
+      setCurrentStep(0);
+      onClose();
+    }
   };
 
   const prevStep = () => {

@@ -1,4 +1,4 @@
-import { Home as HomeIcon, Scissors, Minimize2, RefreshCw, Maximize, Droplet, Layers, Palette, Search } from 'lucide-react';
+import { Home as HomeIcon, Scissors, Minimize2, RefreshCw, Maximize, Droplet, Layers, Palette, Search, Sparkles } from 'lucide-react';
 import styles from './Home.module.css';
 
 export default function Home({ openTab }) {
@@ -22,6 +22,7 @@ export default function Home({ openTab }) {
         </div>
 
         <div className={styles.toolsGrid}>
+
           {/* Tool 1 */}
           <div 
             onClick={() => handleOpen({ id: 'grid-splitter', title: 'قاطع الشبكة', iconName: 'scissors' })} 
@@ -120,28 +121,45 @@ export default function Home({ openTab }) {
               <span className={styles.featureTag}>Anchors</span>
             </div>
           </div>
+
           <div 
-            onClick={() => handleOpen({ id: 'image-merger', title: 'دامج الصور', iconName: 'layers' })} 
-            style={{'--tool-color': 'var(--c6)'}} 
+            onClick={() => handleOpen({ id: 'color-extractor', title: 'مستخرج الألوان', iconName: 'palette' })} 
+            style={{'--tool-color': 'var(--c7)'}} 
             className={styles.toolCard}
+            onMouseMove={(e) => {
+              const rect = e.currentTarget.getBoundingClientRect();
+              e.currentTarget.style.setProperty('--mouse-x', `${e.clientX - rect.left}px`);
+              e.currentTarget.style.setProperty('--mouse-y', `${e.clientY - rect.top}px`);
+            }}
           >
             <div className={styles.toolBadge}>جديد</div>
-            <div className={styles.toolIcon}><Layers size={28} /></div>
-            <div className={styles.toolName}>دامج الصور الاحترافي</div>
-            <div className={styles.toolDesc}>دمج صور متعددة جنباً لجنب أو فوق بعض أو في تخطيط شبكي بدقة عالية</div>
+            <div className={styles.toolIcon}><Palette size={28} /></div>
+            <div className={styles.toolName}>مستخرج لوحة الألوان</div>
+            <div className={styles.toolDesc}>استخرج الألوان المهيمنة من أي صورة وصدّرها بصيغ HEX و RGB و SASS بدقة احترافية</div>
             <div className={styles.toolFeatures}>
-              <span className={styles.featureTag}>سحب وإفلات</span>
-              <span className={styles.featureTag}>تخطيط ذكي</span>
+              <span className={styles.featureTag}>قطارة ذكية</span>
+              <span className={styles.featureTag}>تصدير SASS</span>
             </div>
           </div>
-          <ToolCard 
-            color="var(--c7)" icon={<Palette size={28} />} name="مستخرج لوحة الألوان" 
-            desc="استخرج الألوان المهيمنة من أي صورة وصدّرها بصيغ HEX وRGB" 
-          />
-          <ToolCard 
-            color="var(--c8)" icon={<Search size={28} />} name="كاشف البيانات EXIF" 
-            desc="اعرض كل البيانات المخفية في صورتك من موديل الكاميرا للموقع" 
-          />
+          <div 
+            onClick={() => handleOpen({ id: 'exif-viewer', title: 'كاشف البيانات', iconName: 'search' })} 
+            style={{'--tool-color': 'var(--c8)'}} 
+            className={styles.toolCard}
+            onMouseMove={(e) => {
+              const rect = e.currentTarget.getBoundingClientRect();
+              e.currentTarget.style.setProperty('--mouse-x', `${e.clientX - rect.left}px`);
+              e.currentTarget.style.setProperty('--mouse-y', `${e.clientY - rect.top}px`);
+            }}
+          >
+            <div className={styles.toolIcon}><Search size={28} /></div>
+            <div className={styles.toolName}>كاشف البيانات EXIF</div>
+            <div className={styles.toolDesc}>اعرض كل البيانات المخفية في صورتك من موديل الكاميرا للموقع والإحداثيات</div>
+            <div className={styles.toolFeatures}>
+              <span className={styles.featureTag}>Batch View</span>
+              <span className={styles.featureTag}>GPS Map</span>
+            </div>
+          </div>
+
         </div>
       </section>
     </div>
