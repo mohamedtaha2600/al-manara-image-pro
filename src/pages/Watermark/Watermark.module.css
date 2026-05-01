@@ -1,14 +1,14 @@
 .container {
   height: calc(100vh - 64px);
-  background: #020617;
+  background: var(--bg); /* Use global variable */
   color: #f8fafc;
   display: flex;
   flex-direction: column;
   overflow: hidden;
   font-family: 'Inter', sans-serif;
-  --wat-primary: #e91e63;
-  --wat-surface: #0f172a;
-  --wat-border: #1e293b;
+  --wat-primary: var(--c5); /* Use existing global token or custom pink */
+  --wat-surface: rgba(255, 255, 255, 0.03);
+  --wat-border: rgba(255, 255, 255, 0.08);
 }
 
 .mainLayout {
@@ -19,16 +19,23 @@
 
 /* Sidebar */
 .sidebar {
-  width: 320px;
+  width: 340px; /* Slightly wider */
   background: var(--wat-surface);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border-left: 1px solid var(--wat-border);
   display: flex;
   flex-direction: column;
-  padding: 20px;
-  gap: 20px;
+  padding: 24px;
+  gap: 24px;
   overflow-y: auto;
-  box-shadow: 10px 0 30px rgba(0,0,0,0.5);
+  box-shadow: -5px 0 30px rgba(0,0,0,0.3);
 }
+
+.sidebar::-webkit-scrollbar { width: 4px; }
+.sidebar::-webkit-scrollbar-track { background: transparent; }
+.sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+.sidebar::-webkit-scrollbar-thumb:hover { background: var(--wat-primary); }
 
 .sectionTitle {
   font-size: 1.1rem;
@@ -44,31 +51,33 @@
 .tabGrid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  background: #0f172a;
-  padding: 5px;
-  border-radius: 12px;
+  gap: 8px;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 6px;
+  border-radius: 14px;
+  border: 1px solid var(--wat-border);
 }
 
 .tabBtn {
   background: transparent;
   border: none;
   color: #94a3b8;
-  padding: 10px;
-  border-radius: 8px;
+  padding: 12px;
+  border-radius: 10px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
   font-weight: 600;
-  transition: 0.3s;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .tabActive {
   background: var(--wat-primary);
   color: white;
-  box-shadow: 0 4px 12px rgba(233, 30, 99, 0.3);
+  box-shadow: 0 4px 15px rgba(233, 30, 99, 0.4);
+  transform: translateY(-1px);
 }
 
 /* Controls */
@@ -87,18 +96,19 @@
 }
 
 .textInput {
-  background: #0f172a;
+  background: rgba(0, 0, 0, 0.2);
   border: 1px solid var(--wat-border);
   color: white;
-  padding: 12px;
-  border-radius: 8px;
+  padding: 14px;
+  border-radius: 10px;
   outline: none;
-  font-size: 0.9rem;
-  transition: 0.3s;
+  font-size: 0.95rem;
+  transition: all 0.3s ease;
 }
 
 .textInput:focus {
   border-color: var(--wat-primary);
+  box-shadow: 0 0 0 3px rgba(233, 30, 99, 0.15);
 }
 
 .controlRow {
@@ -113,58 +123,68 @@ input[type="range"] {
 }
 
 .colorPicker {
-  width: 40px;
-  height: 40px;
-  border-radius: 8px;
-  border: 1px solid var(--wat-border);
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  border: 2px solid var(--wat-border);
   cursor: pointer;
   background: none;
   padding: 2px;
+  transition: 0.3s;
+}
+
+.colorPicker:hover {
+  border-color: var(--wat-primary);
 }
 
 /* Anchor Grid */
 .anchorGrid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 5px;
-  background: #0f172a;
-  padding: 10px;
-  border-radius: 12px;
+  gap: 6px;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 12px;
+  border-radius: 14px;
   width: fit-content;
   align-self: center;
+  border: 1px solid var(--wat-border);
 }
 
 .anchorBtn {
-  width: 32px;
-  height: 32px;
-  background: #334155;
-  border: none;
-  border-radius: 4px;
+  width: 36px;
+  height: 36px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid transparent;
+  border-radius: 8px;
   cursor: pointer;
-  transition: 0.2s;
+  transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .anchorBtn:hover {
-  background: #475569;
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .anchorActive {
   background: var(--wat-primary);
-  box-shadow: 0 0 10px rgba(233, 30, 99, 0.5);
+  border-color: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 0 15px rgba(233, 30, 99, 0.5);
+  transform: scale(1.05);
 }
 
 .anchorDot {
-  width: 6px;
-  height: 6px;
-  background: rgba(255,255,255,0.3);
+  width: 8px;
+  height: 8px;
+  background: rgba(255,255,255,0.2);
   border-radius: 50%;
+  transition: 0.2s;
 }
 
 .anchorActive .anchorDot {
   background: #fff;
+  box-shadow: 0 0 5px white;
 }
 
 /* Tiling Button */
@@ -191,35 +211,39 @@ input[type="range"] {
 
 /* Buttons */
 .btnMain {
-  background: var(--wat-primary);
+  background: linear-gradient(135deg, var(--wat-primary), #ff4081);
   color: white;
   border: none;
-  padding: 14px;
+  padding: 16px;
   border-radius: 12px;
   font-weight: 900;
+  font-size: 1rem;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
   cursor: pointer;
-  transition: 0.3s;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 8px 20px rgba(233, 30, 99, 0.3);
 }
 
-.btnMain:hover {
-  filter: brightness(1.1);
-  transform: translateY(-2px);
+.btnMain:hover:not(:disabled) {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 25px rgba(233, 30, 99, 0.4);
 }
 
 .btnMain:disabled {
-  opacity: 0.5;
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.4);
+  box-shadow: none;
   cursor: not-allowed;
 }
 
 .btnSecondary {
-  background: #334155;
+  background: rgba(255, 255, 255, 0.05);
   color: white;
-  border: none;
-  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 14px;
   border-radius: 12px;
   font-weight: 700;
   display: flex;
@@ -227,6 +251,12 @@ input[type="range"] {
   justify-content: center;
   gap: 8px;
   cursor: pointer;
+  transition: 0.3s;
+}
+
+.btnSecondary:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
 /* Workspace */
@@ -277,13 +307,15 @@ input[type="range"] {
 
 /* Bottom Bar */
 .bottomBar {
-  background: var(--wat-surface);
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(10px);
   border-top: 1px solid var(--wat-border);
-  padding: 10px 20px;
+  padding: 16px 24px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  height: 160px;
+  gap: 12px;
+  height: 180px;
+  z-index: 10;
 }
 
 .imageListHeader {

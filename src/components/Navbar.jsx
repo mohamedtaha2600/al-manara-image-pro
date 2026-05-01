@@ -1,4 +1,4 @@
-import { Home as HomeIcon, Scissors, Minimize2, X, Moon, RefreshCw, Maximize, Droplet, Github } from 'lucide-react';
+import { Home as HomeIcon, Scissors, Minimize2, X, Moon, RefreshCw, Maximize, Droplet } from 'lucide-react';
 
 export default function Navbar({ tabs, activeTab, setActiveTab, closeTab }) {
   const getIcon = (iconName) => {
@@ -78,7 +78,9 @@ export default function Navbar({ tabs, activeTab, setActiveTab, closeTab }) {
           className="github-btn"
           title="مشروع مفتوح المصدر على GitHub"
         >
-          <Github size={18} />
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M15 22v-4a4.8 4.8 0 0 0-1-3.02c3.18-.34 6.52-1.6 6.52-7.02a4.8 4.8 0 0 0-1.34-3.32 4.4 4.4 0 0 0-.13-3.28s-1.1-.35-3.6 1.34a12.5 12.5 0 0 0-6.6 0C6.1 2.37 5 2.72 5 2.72a4.4 4.4 0 0 0-.13 3.28 4.8 4.8 0 0 0-1.34 3.32c0 5.4 3.34 6.68 6.52 7.02a4.8 4.8 0 0 0-1 3.02v4"></path>
+          </svg>
         </a>
       </div>
 
