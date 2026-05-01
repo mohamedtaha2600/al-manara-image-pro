@@ -1,4 +1,4 @@
-import { Home as HomeIcon, Scissors, Minimize2, X, Moon, RefreshCw, Maximize, Droplet } from 'lucide-react';
+import { Home as HomeIcon, Scissors, Minimize2, X, Moon, RefreshCw, Maximize, Droplet, Github } from 'lucide-react';
 
 export default function Navbar({ tabs, activeTab, setActiveTab, closeTab }) {
   const getIcon = (iconName) => {
@@ -71,7 +71,17 @@ export default function Navbar({ tabs, activeTab, setActiveTab, closeTab }) {
 
       {/* 3. Actions (Left Side) */}
       <div style={styles.actionsContainer}>
+        <a 
+          href="https://github.com/mohamedtaha2600/al-manara-image-pro" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="github-btn"
+          title="مشروع مفتوح المصدر على GitHub"
+        >
+          <Github size={18} />
+        </a>
       </div>
+
 
       <style>{`
         .chrome-tab {
@@ -148,6 +158,28 @@ export default function Navbar({ tabs, activeTab, setActiveTab, closeTab }) {
         .tab-close-btn:hover {
           background: rgba(255,255,255,0.1);
           color: white;
+        }
+
+        .github-btn {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 36px;
+          height: 36px;
+          border-radius: 10px;
+          background: rgba(255,255,255,0.03);
+          border: 1px solid rgba(255,255,255,0.1);
+          color: var(--text-dim);
+          transition: 0.3s;
+          text-decoration: none;
+        }
+
+        .github-btn:hover {
+          background: rgba(255,255,255,0.08);
+          color: white;
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+          border-color: rgba(255,255,255,0.2);
         }
       `}</style>
     </nav>
