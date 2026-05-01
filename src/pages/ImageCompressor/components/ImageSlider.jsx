@@ -11,6 +11,7 @@ export default function ImageSlider({ before, after }) {
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [isFlashing, setIsFlashing] = useState(false);
 
   const stageRef = useRef(null);
   const containerRef = useRef(null);
@@ -109,7 +110,17 @@ export default function ImageSlider({ before, after }) {
         <div className={styles.toolDivider} />
         <button className={styles.toolBtn} onClick={() => setZoom(prev => Math.min(prev + 0.5, 10))} title="تكبير"><ZoomIn size={18} /></button>
         <button className={styles.toolBtn} onClick={() => setZoom(prev => Math.max(prev - 0.5, 0.5))} title="تصغير"><ZoomOut size={18} /></button>
-        <button className={styles.toolBtn} onClick={resetView} title="إعادة الضبط"><RotateCcw size={18} /></button>
+        <button 
+          className={`${styles.toolBtn} ${isFlashing ? styles.flash : ''}`} 
+          onClick={() => {
+            resetView();
+            setIsFlashing(true);
+            setTimeout(() => setIsFlashing(false), 500);
+          }} 
+          title="إعادة الضبط"
+        >
+          <RotateCcw size={18} />
+        </button>
       </div>
 
       <div 

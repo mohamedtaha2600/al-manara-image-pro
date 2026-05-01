@@ -81,3 +81,15 @@
   box-shadow: 0 0 50px rgba(0,0,0,0.8);
   max-width: none;
 }
+
+.cropOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  z-index: 20;
+}
+
+.cropOverlay > * {
+  pointer-events: all;
+}

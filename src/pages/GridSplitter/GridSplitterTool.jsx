@@ -39,7 +39,12 @@ export default function GridSplitterTool() {
   const [previewZoom, setPreviewZoom] = useState(1);
   const [showHelpModal, setShowHelpModal] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
+  const [spacePressed, setSpacePressed] = useState(false);
   const viewerCanvasRef = useRef(null);
+
+  // Crop Tool State
+  const [cropBox, setCropBox] = useState(null); // { x, y, w, h } in image coords
+  const cropDragRef = useRef(null); // { handle, startX, startY, startBox }
 
   // D&D and Context Menu
   const [isDragOver, setIsDragOver] = useState(false);
@@ -68,7 +73,7 @@ export default function GridSplitterTool() {
   const [globalPadding, setGlobalPadding] = useState({ x: 0, y: 0 });
   const [skipManual, setSkipManual] = useState(true);
 
-  useGridCanvas({ canvasRef, img, cells, zoom, pan, namingType, showRulers, showGrid });
+  useGridCanvas({ canvasRef, img, cells, zoom, pan, namingType, showRulers, showGrid, cropBox: activeTool === 'crop' ? cropBox : null });
   usePreviewRender({ previewMode, previewIndex, img, cells, viewerCanvasRef, containerRef: previewRef });
 
   // Initial Tutorial Check
@@ -119,6 +124,44 @@ export default function GridSplitterTool() {
       return idOrderChanged ? remapped : prev;
     });
   }, [cells.length]);
+
+  // ── Crop Helpers ──────────────────────────────────────────────
+  const initCropBox = (loadedImg = img) => {
+    if (!loadedImg) return;
+    setCropBox({ x: 0, y: 0, w: loadedImg.width, h: loadedImg.height });
+  };
+
+  const applyCrop = () => {
+    if (!img || !cropBox) return;
+    const { x, y, w, h } = cropBox;
+    if (w < 10 || h < 10) return;
+    const offscreen = document.createElement('canvas');
+    offscreen.width = Math.round(w);
+    offscreen.height = Math.round(h);
+    const ctx = offscreen.getContext('2d');
+    ctx.drawImage(img, x, y, w, h, 0, 0, w, h);
+    const newImg = new Image();
+    newImg.onload = () => {
+      setImg(newImg);
+      setImgInfo(`${Math.round(w)}x${Math.round(h)}px`);
+      setCells(initGridCoords(newImg, cols, rows));
+      setCropBox(null);
+      fitToScreen(newImg);
+    };
+    newImg.src = offscreen.toDataURL();
+  };
+
+  // Intercept setActiveTool to apply crop when switching away
+  const handleSetActiveTool = (tool) => {
+    if (activeTool === 'crop' && tool !== 'crop') {
+      applyCrop();
+    }
+    if (tool === 'crop' && activeTool !== 'crop') {
+      initCropBox();
+    }
+    setActiveTool(tool);
+  };
+  // ────────────────────────────────────────────────────────────────
 
   const fitToScreen = (loadedImg = img) => {
     if (!loadedImg || !previewRef.current) return;
@@ -228,13 +271,27 @@ export default function GridSplitterTool() {
   useEffect(() => {
     const handleKeyDown = (e) => {
       if(e.code === 'Space') {
+        e.preventDefault();
         stateRef.current.spacePressed = true;
+        setSpacePressed(true);
         if(previewRef.current && activeTool !== 'pan') previewRef.current.style.cursor = 'grab';
+      }
+      // Apply crop on Enter
+      if (e.code === 'Enter' && activeTool === 'crop') {
+        e.preventDefault();
+        applyCrop();
+        setActiveTool('select');
+      }
+      // Cancel crop on Escape
+      if (e.code === 'Escape' && activeTool === 'crop') {
+        setCropBox(null);
+        setActiveTool('select');
       }
     };
     const handleKeyUp = (e) => {
       if(e.code === 'Space') {
         stateRef.current.spacePressed = false;
+        setSpacePressed(false);
         if(previewRef.current && activeTool !== 'pan') previewRef.current.style.cursor = 'default';
       }
     };
@@ -367,6 +424,8 @@ export default function GridSplitterTool() {
       if (previewRef.current) previewRef.current.style.cursor = 'grabbing';
       return;
     }
+    // Crop tool drag on overlay handles is handled by the overlay itself
+    if (activeTool === 'crop') return;
     if (!previewMode && activeTool === 'select') {
       const { canvasX, canvasY } = getCanvasCoords({ clientX, clientY });
       const hit = findEdgeHit(canvasX, canvasY);
@@ -414,9 +473,10 @@ export default function GridSplitterTool() {
         />
 
         <FloatingToolbar
-          activeTool={activeTool} setActiveTool={setActiveTool} showRulers={showRulers} setShowRulers={setShowRulers}
+          activeTool={activeTool} setActiveTool={handleSetActiveTool} showRulers={showRulers} setShowRulers={setShowRulers}
           showGrid={showGrid} setShowGrid={setShowGrid} hasCells={cells.length > 0} previewMode={previewMode}
           setPreviewMode={setPreviewMode} setPreviewIndex={setPreviewIndex} fitToScreen={fitToScreen}
+          isSpacePressed={spacePressed}
         />
 
         <div 
@@ -435,6 +495,98 @@ export default function GridSplitterTool() {
         >
           <div className={styles.canvasWrapper} style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})` }}>
             <canvas ref={canvasRef} className={styles.canvas} />
+
+            {/* Crop Overlay */}
+            {activeTool === 'crop' && img && cropBox && (() => {
+              const cx = cropBox.x * zoom;
+              const cy = cropBox.y * zoom;
+              const cw = cropBox.w * zoom;
+              const ch = cropBox.h * zoom;
+              const HANDLE = 8;
+
+              const startCropDrag = (handle, e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                const startX = e.clientX;
+                const startY = e.clientY;
+                const startBox = { ...cropBox };
+                const onMove = (me) => {
+                  const dx = (me.clientX - startX) / zoom;
+                  const dy = (me.clientY - startY) / zoom;
+                  setCropBox(prev => {
+                    let { x, y, w, h } = startBox;
+                    const minSize = 20;
+                    if (handle === 'move') { x = Math.max(0, Math.min(img.width - w, x + dx)); y = Math.max(0, Math.min(img.height - h, y + dy)); }
+                    if (handle.includes('right'))  { w = Math.max(minSize, Math.min(img.width - x, w + dx)); }
+                    if (handle.includes('bottom')) { h = Math.max(minSize, Math.min(img.height - y, h + dy)); }
+                    if (handle.includes('left'))   { const nx = Math.max(0, Math.min(x + w - minSize, x + dx)); w = x + w - nx; x = nx; }
+                    if (handle.includes('top'))    { const ny = Math.max(0, Math.min(y + h - minSize, y + dy)); h = y + h - ny; y = ny; }
+                    return { x, y, w, h };
+                  });
+                };
+                const onUp = () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
+                window.addEventListener('mousemove', onMove);
+                window.addEventListener('mouseup', onUp);
+              };
+
+              const handles = [
+                { id: 'top-left',     style: { top: cy - HANDLE, left: cx - HANDLE, cursor: 'nwse-resize' } },
+                { id: 'top-right',    style: { top: cy - HANDLE, left: cx + cw - HANDLE, cursor: 'nesw-resize' } },
+                { id: 'bottom-left',  style: { top: cy + ch - HANDLE, left: cx - HANDLE, cursor: 'nesw-resize' } },
+                { id: 'bottom-right', style: { top: cy + ch - HANDLE, left: cx + cw - HANDLE, cursor: 'nwse-resize' } },
+                { id: 'top',    style: { top: cy - HANDLE, left: cx + cw / 2 - HANDLE, cursor: 'ns-resize' } },
+                { id: 'bottom', style: { top: cy + ch - HANDLE, left: cx + cw / 2 - HANDLE, cursor: 'ns-resize' } },
+                { id: 'left',   style: { top: cy + ch / 2 - HANDLE, left: cx - HANDLE, cursor: 'ew-resize' } },
+                { id: 'right',  style: { top: cy + ch / 2 - HANDLE, left: cx + cw - HANDLE, cursor: 'ew-resize' } },
+              ];
+
+              return (
+                <div className={styles.cropOverlay} style={{ width: img.width * zoom, height: img.height * zoom }}>
+                  {/* Dark mask */}
+                  <svg width={img.width * zoom} height={img.height * zoom} style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
+                    <defs>
+                      <mask id="cropMask">
+                        <rect width="100%" height="100%" fill="white" />
+                        <rect x={cx} y={cy} width={cw} height={ch} fill="black" />
+                      </mask>
+                    </defs>
+                    <rect width="100%" height="100%" fill="rgba(0,0,0,0.55)" mask="url(#cropMask)" />
+                    <rect x={cx} y={cy} width={cw} height={ch} fill="none" stroke="white" strokeWidth="1.5" strokeDasharray="6 3" />
+                    {/* Rule of thirds lines */}
+                    <line x1={cx + cw/3} y1={cy} x2={cx + cw/3} y2={cy + ch} stroke="rgba(255,255,255,0.3)" strokeWidth="0.8" />
+                    <line x1={cx + 2*cw/3} y1={cy} x2={cx + 2*cw/3} y2={cy + ch} stroke="rgba(255,255,255,0.3)" strokeWidth="0.8" />
+                    <line x1={cx} y1={cy + ch/3} x2={cx + cw} y2={cy + ch/3} stroke="rgba(255,255,255,0.3)" strokeWidth="0.8" />
+                    <line x1={cx} y1={cy + 2*ch/3} x2={cx + cw} y2={cy + 2*ch/3} stroke="rgba(255,255,255,0.3)" strokeWidth="0.8" />
+                  </svg>
+                  {/* Move handle (inner box) */}
+                  <div
+                    style={{ position: 'absolute', left: cx, top: cy, width: cw, height: ch, cursor: 'move' }}
+                    onMouseDown={(e) => startCropDrag('move', e)}
+                  />
+                  {/* Corner & Edge handles */}
+                  {handles.map(h => (
+                    <div key={h.id}
+                      onMouseDown={(e) => startCropDrag(h.id, e)}
+                      style={{
+                        position: 'absolute', width: HANDLE * 2, height: HANDLE * 2,
+                        background: 'white', border: '2px solid rgba(0,0,0,0.5)',
+                        borderRadius: '3px', boxShadow: '0 0 4px rgba(0,0,0,0.6)',
+                        ...h.style
+                      }}
+                    />
+                  ))}
+                  {/* Info badge */}
+                  <div style={{
+                    position: 'absolute', left: cx, top: cy - 28,
+                    background: 'rgba(0,0,0,0.8)', color: '#fff',
+                    padding: '2px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 700,
+                    pointerEvents: 'none', whiteSpace: 'nowrap'
+                  }}>
+                    {Math.round(cropBox.w)} × {Math.round(cropBox.h)} — Enter للتطبيق · Esc للإلغاء
+                  </div>
+                </div>
+              );
+            })()}
           </div>
 
           {img && <div className={styles.canvasImgInfo}>{imgInfo}</div>}

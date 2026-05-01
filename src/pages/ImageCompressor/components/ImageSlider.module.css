@@ -62,6 +62,16 @@
   margin: 5px 0;
 }
 
+.flash {
+  animation: flashAnim 0.5s ease-out;
+}
+
+@keyframes flashAnim {
+  0% { background: transparent; transform: scale(1); }
+  30% { background: var(--c2, #fff); transform: scale(1.1); box-shadow: 0 0 20px var(--c2, #fff); }
+  100% { background: transparent; transform: scale(1); }
+}
+
 .container {
   position: relative;
   flex: 1;

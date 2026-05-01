@@ -4,7 +4,7 @@ import JSZip from 'jszip';
 import { useImageBatch } from './hooks/useImageBatch';
 import ImageCard from './components/ImageCard';
 import ComparisonView from './components/ComparisonView';
-import FloatingToolbar from './components/FloatingToolbar';
+import FloatingToolbar from '../GridSplitter/components/FloatingToolbar';
 import { compressImage, formatBytes } from './utils/compressionUtils';
 import styles from './ImageCompressor.module.css';
 
@@ -42,6 +42,15 @@ export default function ImageCompressorTool() {
   const [activeImageId, setActiveImageId] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
   const [activeTool, setActiveTool] = useState('select');
+  const [spacePressed, setSpacePressed] = useState(false);
+
+  useEffect(() => {
+    const down = (e) => { if (e.code === 'Space') { e.preventDefault(); setSpacePressed(true); } };
+    const up = (e) => { if (e.code === 'Space') setSpacePressed(false); };
+    window.addEventListener('keydown', down);
+    window.addEventListener('keyup', up);
+    return () => { window.removeEventListener('keydown', down); window.removeEventListener('keyup', up); };
+  }, []);
   const fileInputRef = useRef(null);
   const folderInputRef = useRef(null);
 
@@ -317,6 +326,7 @@ export default function ImageCompressorTool() {
           setActiveTool={setActiveTool}
           fitToScreen={() => {}}
           color="var(--c2)"
+          isSpacePressed={spacePressed}
         />
 
         <div className={styles.previewArea}>

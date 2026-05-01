@@ -3,7 +3,7 @@ import {
   Maximize2, Move, Download, Trash2, 
   Settings, Zap, Image as ImageIcon, 
   Lock, Unlock, RefreshCw, X, Upload, Layers,
-  ChevronRight, ChevronLeft, Crop, Search, ZoomIn, ZoomOut, MousePointer2
+  ChevronRight, ChevronLeft, Crop, Search, ZoomIn, ZoomOut, MousePointer2, Plus
 } from 'lucide-react';
 import JSZip from 'jszip';
 import styles from './ImageResizer.module.css';
@@ -35,44 +35,6 @@ export default function ImageResizerTool() {
     isPanning: false, panStartX: 0, panStartY: 0, initialPanX: 0, initialPanY: 0
   });
 
-  // Track Spacebar
-  useEffect(() => {
-    const down = (e) => { if (e.code === 'Space') { e.preventDefault(); setSpacePressed(true); } };
-    const up = (e) => { if (e.code === 'Space') setSpacePressed(false); };
-    window.addEventListener('keydown', down);
-    window.addEventListener('keyup', up);
-    return () => { window.removeEventListener('keydown', down); window.removeEventListener('keyup', up); };
-  }, []);
-
-  const handleManualInput = (dim, value) => {
-    const val = parseInt(value) || 0;
-    if (dim === 'w') {
-      setTargetWidth(val);
-      setCropBox(prev => {
-        const nb = { ...prev, w: Math.min(val, imgElement.width - prev.x) };
-        if (lockAspectRatio && activeRatio !== 'free') {
-          const ratio = ratios.find(r => r.id === activeRatio).ratio;
-          nb.h = nb.w / ratio;
-          setTargetHeight(Math.round(nb.h));
-        }
-        updateActiveFileSettings(nb, nb.w, parseInt(targetHeight));
-        return nb;
-      });
-    } else {
-      setTargetHeight(val);
-      setCropBox(prev => {
-        const nb = { ...prev, h: Math.min(val, imgElement.height - prev.y) };
-        if (lockAspectRatio && activeRatio !== 'free') {
-          const ratio = ratios.find(r => r.id === activeRatio).ratio;
-          nb.w = nb.h * ratio;
-          setTargetWidth(Math.round(nb.w));
-        }
-        updateActiveFileSettings(prev, parseInt(targetWidth), nb.h);
-        return nb;
-      });
-    }
-  };
-
   const activeFile = files[activeIndex] || null;
   const [imgElement, setImgElement] = useState(null);
 
@@ -96,14 +58,11 @@ export default function ImageResizerTool() {
       const img = new Image();
       img.onload = () => {
         setImgElement(img);
-        
-        // If image doesn't have settings, initialize it
         if (!activeFile.cropBox) {
           const initBox = { x: 0, y: 0, w: img.width, h: img.height };
           setCropBox(initBox);
           setTargetWidth(img.width);
           setTargetHeight(img.height);
-          // Save to state
           setFiles(prev => prev.map((f, i) => 
             i === activeIndex ? { ...f, cropBox: initBox, targetWidth: img.width, targetHeight: img.height } : f
           ));
@@ -112,7 +71,6 @@ export default function ImageResizerTool() {
           setTargetWidth(activeFile.targetWidth);
           setTargetHeight(activeFile.targetHeight);
         }
-        
         fitToScreen(img);
       };
       img.src = activeFile.previewUrl;
@@ -121,23 +79,21 @@ export default function ImageResizerTool() {
     }
   }, [activeFile?.id, activeIndex]);
 
+  useEffect(() => {
+    const down = (e) => { if (e.code === 'Space') { e.preventDefault(); setSpacePressed(true); } };
+    const up = (e) => { if (e.code === 'Space') setSpacePressed(false); };
+    window.addEventListener('keydown', down);
+    window.addEventListener('keyup', up);
+    return () => { window.removeEventListener('keydown', down); window.removeEventListener('keyup', up); };
+  }, []);
+
   const fitToScreen = (img = imgElement) => {
     if (!img || !containerRef.current) return;
-    const cw = containerRef.current.clientWidth - 40;
-    const ph = containerRef.current.clientHeight - 40;
+    const cw = containerRef.current.clientWidth - 100;
+    const ph = containerRef.current.clientHeight - 100;
     const ratio = Math.min(cw / img.width, ph / img.height);
-    setZoom(ratio * 0.7); // 70% Scale for better margins
+    setZoom(ratio * 0.8);
     setPan({ x: 0, y: 0 });
-  };
-
-  const handleApplyToAll = () => {
-    if (!activeFile) return;
-    setFiles(prev => prev.map(f => ({
-      ...f,
-      cropBox: { ...cropBox },
-      targetWidth,
-      targetHeight
-    })));
   };
 
   const handleAddFiles = (newFiles) => {
@@ -166,51 +122,44 @@ export default function ImageResizerTool() {
     });
   };
 
-  const toggleSelection = (e, id) => {
-    e.stopPropagation();
-    setFiles(prev => prev.map(f => f.id === id ? { ...f, isSelected: !f.isSelected } : f));
-  };
-
-  const toggleAllSelection = () => {
-    const allSelected = files.length > 0 && files.every(f => f.isSelected);
-    setFiles(prev => prev.map(f => ({ ...f, isSelected: !allSelected })));
-  };
-
-  const handleDeleteFile = (e, index) => {
-    e.stopPropagation(); // Don't trigger active index change
-    const newFiles = files.filter((_, i) => i !== index);
-    
-    // Revoke URL to prevent memory leaks
-    URL.revokeObjectURL(files[index].previewUrl);
-    
-    setFiles(newFiles);
-    
-    // Adjust active index
-    if (index <= activeIndex && activeIndex > 0) {
-      setActiveIndex(activeIndex - 1);
-    } else if (newFiles.length === 0) {
-      setActiveIndex(0);
-    }
-  };
-
   const setRatio = (rObj) => {
     setActiveRatio(rObj.id);
     if (!imgElement || !rObj.ratio) return;
-    
     let nw = imgElement.width;
     let nh = imgElement.height;
-    
     if (imgElement.width / imgElement.height > rObj.ratio) {
       nw = imgElement.height * rObj.ratio;
     } else {
       nh = imgElement.width / rObj.ratio;
     }
-    
     const nx = (imgElement.width - nw) / 2;
     const ny = (imgElement.height - nh) / 2;
     setCropBox({ x: nx, y: ny, w: nw, h: nh });
     setTargetWidth(Math.round(nw));
     setTargetHeight(Math.round(nh));
+  };
+
+  const handleManualInput = (dim, value) => {
+    const val = parseInt(value) || 0;
+    if (dim === 'w') {
+      setTargetWidth(val);
+      if (lockAspectRatio && activeRatio !== 'free') {
+        const ratioObj = ratios.find(r => r.id === activeRatio);
+        if (ratioObj?.ratio) {
+          const nh = val / ratioObj.ratio;
+          setTargetHeight(Math.round(nh));
+        }
+      }
+    } else {
+      setTargetHeight(val);
+      if (lockAspectRatio && activeRatio !== 'free') {
+        const ratioObj = ratios.find(r => r.id === activeRatio);
+        if (ratioObj?.ratio) {
+          const nw = val * ratioObj.ratio;
+          setTargetWidth(Math.round(nw));
+        }
+      }
+    }
   };
 
   const getCanvasCoords = (e) => {
@@ -221,31 +170,6 @@ export default function ImageResizerTool() {
       x: (clientX - rect.left) / zoom,
       y: (clientY - rect.top) / zoom
     };
-  };
-
-  const handleMouseDown = (e) => {
-    if (!imgElement) return;
-    
-    if (activeTool === 'pan' || spacePressed || e.button === 1) {
-      stateRef.current.isPanning = true;
-      stateRef.current.panStartX = e.clientX;
-      stateRef.current.panStartY = e.clientY;
-      stateRef.current.initialPanX = pan.x;
-      stateRef.current.initialPanY = pan.y;
-      return;
-    }
-
-    const { x, y } = getCanvasCoords(e);
-    // Logic for finding edge omitted for brevity but should be here...
-    // Re-implementing simplified edge find
-    const edge = findEdge(x, y);
-    if (edge) {
-      stateRef.current.isDragging = true;
-      stateRef.current.dragEdge = edge;
-      stateRef.current.startX = x;
-      stateRef.current.startY = y;
-      stateRef.current.initialBox = { ...cropBox };
-    }
   };
 
   const findEdge = (x, y) => {
@@ -263,6 +187,27 @@ export default function ImageResizerTool() {
     return null;
   };
 
+  const handleMouseDown = (e) => {
+    if (!imgElement) return;
+    if (activeTool === 'pan' || spacePressed || e.button === 1) {
+      stateRef.current.isPanning = true;
+      stateRef.current.panStartX = e.clientX;
+      stateRef.current.panStartY = e.clientY;
+      stateRef.current.initialPanX = pan.x;
+      stateRef.current.initialPanY = pan.y;
+      return;
+    }
+    const { x, y } = getCanvasCoords(e);
+    const edge = findEdge(x, y);
+    if (edge) {
+      stateRef.current.isDragging = true;
+      stateRef.current.dragEdge = edge;
+      stateRef.current.startX = x;
+      stateRef.current.startY = y;
+      stateRef.current.initialBox = { ...cropBox };
+    }
+  };
+
   useEffect(() => {
     const handleMouseMove = (e) => {
       if (stateRef.current.isPanning) {
@@ -271,64 +216,44 @@ export default function ImageResizerTool() {
         setPan({ x: stateRef.current.initialPanX + dx, y: stateRef.current.initialPanY + dy });
         return;
       }
-
       if (!stateRef.current.isDragging) return;
       const { x, y } = getCanvasCoords(e);
       const dx = x - stateRef.current.startX;
       const dy = y - stateRef.current.startY;
       const { dragEdge, initialBox } = stateRef.current;
-
       setCropBox(prev => {
         let nb = { ...prev };
         const currentRatio = activeRatio !== 'free' ? ratios.find(r => r.id === activeRatio).ratio : null;
-
         if (dragEdge === 'move') {
           nb.x = Math.max(0, Math.min(initialBox.x + dx, imgElement.width - initialBox.w));
           nb.y = Math.max(0, Math.min(initialBox.y + dy, imgElement.height - initialBox.h));
         } else {
-          // 1. Independent Resizing (Sides) or 2D Resizing (Corners)
-          if (dragEdge.includes('right')) {
-            nb.w = Math.min(Math.max(20, initialBox.w + dx), imgElement.width - initialBox.x);
-          }
+          if (dragEdge.includes('right')) nb.w = Math.min(Math.max(20, initialBox.w + dx), imgElement.width - initialBox.x);
           if (dragEdge.includes('left')) {
             const nx = Math.max(0, Math.min(initialBox.x + dx, initialBox.x + initialBox.w - 20));
             nb.w = initialBox.x + initialBox.w - nx;
             nb.x = nx;
           }
-          if (dragEdge.includes('bottom')) {
-            nb.h = Math.min(Math.max(20, initialBox.h + dy), imgElement.height - initialBox.y);
-          }
+          if (dragEdge.includes('bottom')) nb.h = Math.min(Math.max(20, initialBox.h + dy), imgElement.height - initialBox.y);
           if (dragEdge.includes('top')) {
             const ny = Math.max(0, Math.min(initialBox.y + dy, initialBox.y + initialBox.h - 20));
             nb.h = initialBox.y + initialBox.h - ny;
             nb.y = ny;
           }
-
-          // 2. Apply Ratio Lock ONLY if not in free mode
           if (currentRatio) {
             if (dragEdge === 'right' || dragEdge === 'left') nb.h = nb.w / currentRatio;
             else if (dragEdge === 'bottom' || dragEdge === 'top') nb.w = nb.h * currentRatio;
             else {
-              // Corners maintain ratio based on larger change
               if (Math.abs(dx) > Math.abs(dy)) nb.h = nb.w / currentRatio;
               else nb.w = nb.h * currentRatio;
             }
           }
         }
-        
-        const finalBox = nb;
         setTargetWidth(Math.round(nb.w));
         setTargetHeight(Math.round(nb.h));
-        
-        // Sync to files array memory
-        setFiles(prev => prev.map((f, i) => 
-          i === activeIndex ? { ...f, cropBox: finalBox, targetWidth: Math.round(finalBox.w), targetHeight: Math.round(finalBox.h) } : f
-        ));
-
         return nb;
       });
     };
-
     const handleMouseUp = () => { 
       stateRef.current.isDragging = false; 
       stateRef.current.isPanning = false;
@@ -336,177 +261,88 @@ export default function ImageResizerTool() {
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('mouseup', handleMouseUp);
     return () => { window.removeEventListener('mousemove', handleMouseMove); window.removeEventListener('mouseup', handleMouseUp); };
-  }, [imgElement, zoom, activeRatio, activeIndex]);
-
-  const processFile = async (f) => {
-    return new Promise((resolve) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const box = f.cropBox || { x: 0, y: 0, w: img.width, h: img.height };
-        const tw = parseInt(f.targetWidth) || img.width;
-        const th = parseInt(f.targetHeight) || img.height;
-        
-        canvas.width = tw;
-        canvas.height = th;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, box.x, box.y, box.w, box.h, 0, 0, tw, th);
-        
-        canvas.toBlob((blob) => {
-          resolve({ name: f.name, blob });
-        }, f.file.type, 0.92);
-      };
-      img.src = f.previewUrl;
-    });
-  };
-
-  const handleBatchExport = async () => {
-    const filesToExport = files.filter(f => f.isSelected);
-    if (filesToExport.length === 0) return;
-    setIsProcessing(true);
-    setProgress(0);
-    const zip = new JSZip();
-    
-    for (let i = 0; i < filesToExport.length; i++) {
-      const result = await processFile(filesToExport[i]);
-      zip.file(`cropped_${result.name}`, result.blob);
-      setProgress(Math.round(((i + 1) / filesToExport.length) * 100));
-    }
-
-    const content = await zip.generateAsync({ type: 'blob' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(content);
-    link.download = `AlManara_Batch_Resized_${Date.now()}.zip`;
-    link.click();
-    
-    setIsProcessing(false);
-    setProgress(0);
-  };
-
-  const selectedCount = files.filter(f => f.isSelected).length;
+  }, [imgElement, zoom, activeRatio]);
 
   return (
     <div className={styles.container}>
       <div className={styles.mainLayout}>
         <aside className={styles.sidebar}>
+          <div className={styles.dropzone} onClick={() => fileInputRef.current.click()}>
+            <Upload size={32} color="var(--c4)" />
+            <div className={styles.dropzoneText}>
+              <h3>اسحب الصور هنا أو انقر للرفع</h3>
+              <p>تحكم كامل في الأبعاد والنسب</p>
+            </div>
+          </div>
           <div className={styles.sectionTitle}><Settings size={20} /> خيارات الأبعاد</div>
-          
           <div className={styles.inputGroup}>
             <div className={styles.labelSmall}>العرض × الارتفاع</div>
             <div className={styles.inputRow}>
               <input type="number" value={targetWidth} onChange={e => handleManualInput('w', e.target.value)} />
-              <button 
-                className={`${styles.lockBtn} ${lockAspectRatio ? styles.lockActive : ''}`}
-                onClick={() => setLockAspectRatio(!lockAspectRatio)}
-              >
+              <button className={`${styles.lockBtn} ${lockAspectRatio ? styles.lockActive : ''}`} onClick={() => setLockAspectRatio(!lockAspectRatio)}>
                 {lockAspectRatio ? <Lock size={14}/> : <Unlock size={14}/>}
               </button>
               <input type="number" value={targetHeight} onChange={e => handleManualInput('h', e.target.value)} />
             </div>
           </div>
-
           <div className={styles.ratioGridScroll + " " + styles.scrollBar}>
              <div className={styles.labelSmall}>نسب القص المتاحة</div>
              <div className={styles.ratioGrid}>
                 {ratios.map(r => (
-                  <button 
-                    key={r.id} 
-                    className={`${styles.ratioBtn} ${activeRatio === r.id ? styles.ratioActive : ''}`}
-                    onClick={() => setRatio(r)}
-                  >
-                    <span style={{fontSize: '0.85rem', fontWeight: 900}}>{r.label}</span>
-                    <span style={{fontSize: '0.6rem', color: '#666'}}>{r.name}</span>
+                  <button key={r.id} className={`${styles.ratioBtn} ${activeRatio === r.id ? styles.ratioActive : ''}`} onClick={() => setRatio(r)}>
+                    <span>{r.label}</span>
+                    <small>{r.name}</small>
                   </button>
                 ))}
              </div>
           </div>
-
           <div style={{marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '10px'}}>
-            <button className={styles.btnSecondary} onClick={handleApplyToAll} disabled={!activeFile || isProcessing}>
-              <Layers size={18} /> تطبيق على الكل
-            </button>
-            <button className={styles.btnMain} onClick={handleBatchExport} disabled={selectedCount === 0 || isProcessing}>
-              {isProcessing ? (
-                <div className={styles.progressContainer}>
-                  <div className={styles.progressBar} style={{width: `${progress}%`}}></div>
-                  <span className={styles.progressText}>جاري المعالجة {progress}%</span>
-                </div>
-              ) : (
-                <>
-                  <Download size={20} /> تنزيل المحدد ({selectedCount})
-                </>
-              )}
+            <button className={styles.btnSecondary} disabled={!activeFile}><Layers size={18} /> تطبيق على الكل</button>
+            <button className={styles.btnMain} disabled={files.length === 0}>
+              <Download size={20} /> تنزيل المحدد ({files.filter(f => f.isSelected).length})
             </button>
           </div>
         </aside>
 
-        <FloatingToolbar 
-          activeTool={activeTool} setActiveTool={setActiveTool}
-          fitToScreen={fitToScreen} setZoom={setZoom}
-          hasCells={!!activeFile}
-          simpleMode={true}
-          color="var(--c4)"
-        />
-
-        <div className={styles.workspace} ref={containerRef}>
-          <div 
-            className={styles.canvasContainer} 
-            onMouseDown={handleMouseDown}
-            onMouseMove={(e) => {
-              if (activeTool !== 'select' || stateRef.current.isDragging || spacePressed) return;
-              const { x, y } = getCanvasCoords(e);
-              const edge = findEdge(x, y);
-              if (edge) {
-                if (edge === 'move') e.target.style.cursor = 'move';
-                else if (edge.includes('left') || edge.includes('right')) e.target.style.cursor = 'ew-resize';
-                else if (edge.includes('top') || edge.includes('bottom')) e.target.style.cursor = 'ns-resize';
-              } else {
-                e.target.style.cursor = 'default';
-              }
-            }}
-            style={{ 
-              cursor: (activeTool === 'pan' || spacePressed)
-                ? (stateRef.current.isPanning ? 'grabbing' : 'grab') 
-                : 'default' 
-            }}
-            onWheel={(e) => {
-              const delta = e.deltaY > 0 ? 0.9 : 1.1;
-              setZoom(z => Math.max(0.05, Math.min(15, z * delta)));
-            }}
-          >
-            {!activeFile ? (
-              <div className={styles.emptyState} onClick={() => fileInputRef.current.click()}>
-                <Upload size={60} color="var(--res-primary)" />
-                <h3 style={{fontWeight: 900}}>ارفع صورك للقص الاحترافي</h3>
-                <p>تحكم كامل في الأبعاد والنسب مع معاينة حية</p>
+        <div className={styles.rightContent}>
+          <div className={styles.topSection}>
+            <FloatingToolbar 
+              activeTool={activeTool} setActiveTool={setActiveTool}
+              fitToScreen={fitToScreen} setZoom={setZoom}
+              hasCells={!!activeFile} simpleMode={true} color="var(--c4)"
+              isSpacePressed={spacePressed}
+            />
+            <div className={styles.workspace} ref={containerRef}>
+              <div className={styles.canvasContainer} onMouseDown={handleMouseDown} onWheel={(e) => {
+                  const delta = e.deltaY > 0 ? 0.9 : 1.1;
+                  setZoom(z => Math.max(0.05, Math.min(15, z * delta)));
+              }}>
+                {!activeFile ? (
+                  <div className={styles.emptyState} onClick={() => fileInputRef.current.click()}>
+                    <Upload size={60} color="var(--c4)" />
+                    <h3 style={{fontWeight: 900}}>ارفع صورك للقص الاحترافي</h3>
+                    <p>تحكم كامل في الأبعاد والنسب مع معاينة حية</p>
+                  </div>
+                ) : (
+                  <div className={styles.canvasWrapper} style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})` }}>
+                    <canvas ref={canvasRef} />
+                  </div>
+                )}
               </div>
-            ) : (
-              <div className={styles.canvasWrapper} style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})` }}>
-                <canvas ref={canvasRef} />
-              </div>
-            )}
+            </div>
           </div>
 
           <div className={styles.bottomBar}>
             <div className={styles.imageListHeader}>
               <span>قائمة الصور ({files.length})</span>
-              <div style={{display: 'flex', gap: '10px'}}>
-                <button className={styles.addMoreBtn} onClick={toggleAllSelection} style={{background: 'rgba(255,255,255,0.1)'}}>تحديد الكل</button>
-                <button className={styles.addMoreBtn} onClick={() => fileInputRef.current.click()}>+ إضافة صور</button>
-              </div>
+              <button className={styles.addMoreBtn} onClick={() => fileInputRef.current.click()}>+ إضافة صور</button>
             </div>
             <div className={styles.imageListItems + " " + styles.scrollBar}>
               {files.map((f, i) => (
-                <div 
-                  key={f.id} 
-                  className={`${styles.imageThumb} ${i === activeIndex ? styles.thumbActive : ''}`}
-                  onClick={() => setActiveIndex(i)}
-                  style={{opacity: f.isSelected ? 1 : 0.4}}
-                >
+                <div key={f.id} className={`${styles.imageThumb} ${i === activeIndex ? styles.thumbActive : ''}`} onClick={() => setActiveIndex(i)}>
                   <img src={f.previewUrl} alt="" />
                   <div className={styles.thumbOverlay}>{i + 1}</div>
-                  <input type="checkbox" checked={f.isSelected} onChange={(e) => toggleSelection(e, f.id)} style={{position: 'absolute', top: 5, right: 5, cursor: 'pointer', zIndex: 10}} onClick={e => e.stopPropagation()} />
-                  <button className={styles.deleteThumbBtn} onClick={(e) => handleDeleteFile(e, i)}>
+                  <button className={styles.deleteThumbBtn} onClick={(e) => { e.stopPropagation(); setFiles(prev => prev.filter((_, idx) => idx !== i)); }}>
                     <X size={14} />
                   </button>
                 </div>

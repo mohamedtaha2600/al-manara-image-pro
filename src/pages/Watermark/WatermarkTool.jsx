@@ -425,24 +425,29 @@ export default function WatermarkTool() {
           </div>
         </aside>
 
-        <FloatingToolbar activeTool={activeTool} setActiveTool={setActiveTool} fitToScreen={fitToScreen} setZoom={setZoom} hasCells={!!activeFile} simpleMode={true} color="var(--c5)" />
+        <div className={styles.rightContent}>
+          <div className={styles.topSection}>
+            <FloatingToolbar activeTool={activeTool} setActiveTool={setActiveTool} fitToScreen={fitToScreen} setZoom={setZoom} hasCells={!!activeFile} simpleMode={true} color="var(--c5)" isSpacePressed={spacePressed} />
 
-        <div className={styles.workspace} ref={containerRef}>
-          <div className={styles.canvasContainer} onMouseDown={handleMouseDown}
-               style={{ cursor: (activeTool === 'pan' || spacePressed) ? (stateRef.current.isPanning ? 'grabbing' : 'grab') : (activeTool === 'select' ? 'default' : 'crosshair') }}
-               onWheel={(e) => setZoom(z => Math.max(0.05, Math.min(15, z * (e.deltaY > 0 ? 0.9 : 1.1))))}>
-            {!activeFile ? (
-              <div className={styles.emptyState} onClick={() => fileInputRef.current.click()}>
-                <Upload size={60} color="var(--wat-primary)" />
-                <h3 style={{fontWeight: 900}}>ارفع صورك لحمايتها</h3>
-                <p>أضف علامتك المائية بلمسات احترافية فائقة</p>
+            <div className={styles.workspace} ref={containerRef}>
+              <div className={styles.canvasContainer} onMouseDown={handleMouseDown}
+                   style={{ cursor: (activeTool === 'pan' || spacePressed) ? (stateRef.current.isPanning ? 'grabbing' : 'grab') : (activeTool === 'select' ? 'default' : 'crosshair') }}
+                   onWheel={(e) => setZoom(z => Math.max(0.05, Math.min(15, z * (e.deltaY > 0 ? 0.9 : 1.1))))}>
+                {!activeFile ? (
+                  <div className={styles.emptyState} onClick={() => fileInputRef.current.click()}>
+                    <Upload size={60} color="var(--wat-primary)" />
+                    <h3 style={{fontWeight: 900}}>ارفع صورك لحمايتها</h3>
+                    <p>أضف علامتك المائية بلمسات احترافية فائقة</p>
+                  </div>
+                ) : (
+                  <div className={styles.canvasWrapper} style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})` }}>
+                    <canvas ref={canvasRef} />
+                  </div>
+                )}
               </div>
-            ) : (
-              <div className={styles.canvasWrapper} style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})` }}>
-                <canvas ref={canvasRef} />
-              </div>
-            )}
+            </div>
           </div>
+
           <div className={styles.bottomBar}>
             <div className={styles.imageListHeader}>
               <span>قائمة الصور ({files.length})</span>

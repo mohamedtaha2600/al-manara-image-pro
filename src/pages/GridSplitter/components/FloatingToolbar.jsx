@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { MousePointer2, Hand, Ruler, Eye, Maximize, Grid, Crop } from 'lucide-react';
 import styles from './FloatingToolbar.module.css';
 
@@ -14,8 +15,16 @@ export default function FloatingToolbar({
   setPreviewIndex,
   fitToScreen,
   simpleMode = false,
-  color = 'var(--c1)' // Default to GridSplitter color
+  color = 'var(--c1)', // Default to GridSplitter color
+  isSpacePressed = false
 }) {
+  const [isFlashing, setIsFlashing] = useState(false);
+
+  const handleFitClick = () => {
+    setIsFlashing(true);
+    fitToScreen();
+    setTimeout(() => setIsFlashing(false), 500);
+  };
   return (
     <div className={styles.floatingToolbar} style={{'--tool-color': color}}>
       <button 
@@ -26,8 +35,8 @@ export default function FloatingToolbar({
         <MousePointer2 size={20} />
       </button>
       <button 
-        title="أداة التحريك (Hand)"
-        className={`${styles.toolBtn} ${activeTool === 'pan' ? styles.active : ''}`}
+        title="أداة التحريك (Hand) [مسطرة]"
+        className={`${styles.toolBtn} ${(activeTool === 'pan' || isSpacePressed) ? styles.active : ''}`}
         onClick={() => setActiveTool('pan')}
       >
         <Hand size={20} />
@@ -78,8 +87,8 @@ export default function FloatingToolbar({
 
       <button 
         title="ملاءمة الشاشة (Fit to Screen)"
-        className={styles.toolBtn}
-        onClick={() => fitToScreen()}
+        className={`${styles.toolBtn} ${isFlashing ? styles.flash : ''}`}
+        onClick={handleFitClick}
       >
         <Maximize size={20} />
       </button>

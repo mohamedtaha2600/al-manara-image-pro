@@ -264,6 +264,23 @@ input[type="range"] {
   border-color: rgba(255, 255, 255, 0.2);
 }
 
+/* Right Content (toolbar + workspace + bottomBar) */
+.rightContent {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+}
+
+.topSection {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+}
+
 /* Workspace */
 .workspace {
   flex: 1;

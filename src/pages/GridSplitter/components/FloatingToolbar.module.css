@@ -35,5 +35,15 @@
 .toolBtn.active {
   background: var(--tool-color, var(--c1));
   color: #fff;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.3); /* Subdued shadow instead of glowing spread */
+  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+}
+
+.flash {
+  animation: flashAnim 0.5s ease-out;
+}
+
+@keyframes flashAnim {
+  0% { background: transparent; transform: scale(1); }
+  30% { background: var(--tool-color, #fff); transform: scale(1.1); box-shadow: 0 0 20px var(--tool-color, #fff); }
+  100% { background: transparent; transform: scale(1); }
 }
