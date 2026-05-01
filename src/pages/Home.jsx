@@ -27,6 +27,11 @@ export default function Home({ openTab }) {
             onClick={() => handleOpen({ id: 'grid-splitter', title: 'قاطع الشبكة', iconName: 'scissors' })} 
             style={{'--tool-color': 'var(--c1)'}} 
             className={styles.toolCard}
+            onMouseMove={(e) => {
+              const rect = e.currentTarget.getBoundingClientRect();
+              e.currentTarget.style.setProperty('--mouse-x', `${e.clientX - rect.left}px`);
+              e.currentTarget.style.setProperty('--mouse-y', `${e.clientY - rect.top}px`);
+            }}
           >
             <div className={styles.toolBadge}>الأكثر استخداماً</div>
             <div className={styles.toolIcon}><Scissors size={28} /></div>
@@ -43,6 +48,11 @@ export default function Home({ openTab }) {
             onClick={() => handleOpen({ id: 'image-compressor', title: 'ضاغط الصور', iconName: 'minimize' })} 
             style={{'--tool-color': 'var(--c2)'}} 
             className={styles.toolCard}
+            onMouseMove={(e) => {
+              const rect = e.currentTarget.getBoundingClientRect();
+              e.currentTarget.style.setProperty('--mouse-x', `${e.clientX - rect.left}px`);
+              e.currentTarget.style.setProperty('--mouse-y', `${e.clientY - rect.top}px`);
+            }}
           >
             <div className={styles.toolBadge}>شائع</div>
             <div className={styles.toolIcon}><Minimize2 size={28} /></div>
@@ -59,6 +69,11 @@ export default function Home({ openTab }) {
             onClick={() => handleOpen({ id: 'image-converter', title: 'محول الصور', iconName: 'refresh' })} 
             style={{'--tool-color': 'var(--c3)'}} 
             className={styles.toolCard}
+            onMouseMove={(e) => {
+              const rect = e.currentTarget.getBoundingClientRect();
+              e.currentTarget.style.setProperty('--mouse-x', `${e.clientX - rect.left}px`);
+              e.currentTarget.style.setProperty('--mouse-y', `${e.clientY - rect.top}px`);
+            }}
           >
             <div className={styles.toolBadge}>سريع</div>
             <div className={styles.toolIcon}><RefreshCw size={28} /></div>
@@ -73,6 +88,11 @@ export default function Home({ openTab }) {
             onClick={() => handleOpen({ id: 'image-resizer', title: 'مغير الأبعاد', iconName: 'maximize' })} 
             style={{'--tool-color': 'var(--c4)'}} 
             className={styles.toolCard}
+            onMouseMove={(e) => {
+              const rect = e.currentTarget.getBoundingClientRect();
+              e.currentTarget.style.setProperty('--mouse-x', `${e.clientX - rect.left}px`);
+              e.currentTarget.style.setProperty('--mouse-y', `${e.clientY - rect.top}px`);
+            }}
           >
             <div className={styles.toolIcon}><Maximize size={28} /></div>
             <div className={styles.toolName}>مغيّر الأبعاد والقص الاحترافي</div>
@@ -86,6 +106,11 @@ export default function Home({ openTab }) {
             onClick={() => handleOpen({ id: 'watermark-adder', title: 'علامة مائية', iconName: 'droplet' })} 
             style={{'--tool-color': 'var(--c5)'}} 
             className={styles.toolCard}
+            onMouseMove={(e) => {
+              const rect = e.currentTarget.getBoundingClientRect();
+              e.currentTarget.style.setProperty('--mouse-x', `${e.clientX - rect.left}px`);
+              e.currentTarget.style.setProperty('--mouse-y', `${e.clientY - rect.top}px`);
+            }}
           >
             <div className={styles.toolIcon}><Droplet size={28} /></div>
             <div className={styles.toolName}>إضافة علامة مائية</div>
@@ -113,15 +138,23 @@ export default function Home({ openTab }) {
   );
 }
 
-function ToolCard({ color, icon, name, desc, badge }) {
+function ToolCard({ color, icon, name, desc, badge, features }) {
+  const handleMouseMove = (e) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    e.currentTarget.style.setProperty('--mouse-x', `${x}px`);
+    e.currentTarget.style.setProperty('--mouse-y', `${y}px`);
+  };
+
   return (
-    <div style={{'--tool-color': color}} className={styles.toolCard}>
+    <div style={{'--tool-color': color}} className={styles.toolCard} onMouseMove={handleMouseMove}>
       {badge && <div className={styles.toolBadge}>{badge}</div>}
       <div className={styles.toolIcon}>{icon}</div>
       <div className={styles.toolName}>{name}</div>
       <div className={styles.toolDesc}>{desc}</div>
       <div className={styles.toolFeatures}>
-        <span className={styles.featureTag}>قريباً</span>
+        {features ? features.map(f => <span key={f} className={styles.featureTag}>{f}</span>) : <span className={styles.featureTag}>قريباً</span>}
       </div>
     </div>
   );
