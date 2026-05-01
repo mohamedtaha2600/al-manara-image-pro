@@ -6,6 +6,7 @@ import ImageCompressor from './pages/ImageCompressor/ImageCompressorTool';
 import ImageConverter from './pages/ImageConverter/ImageConverterTool';
 import ImageResizer from './pages/ImageResizer/ImageResizerTool';
 import WatermarkTool from './pages/Watermark/WatermarkTool';
+import ImageMergerTool from './pages/ImageMerger/ImageMergerTool';
 
 function App() {
   // Initialize state from LocalStorage or default
@@ -88,6 +89,12 @@ function App() {
         {tabs.some(t => t.id === 'watermark-adder') && (
           <div style={{ display: activeTab === 'watermark-adder' ? 'block' : 'none', height: '100%' }}>
             <WatermarkTool />
+          </div>
+        )}
+
+        {tabs.some(t => t.id === 'image-merger') && (
+          <div style={{ display: activeTab === 'image-merger' ? 'block' : 'none', height: '100%' }}>
+            <ImageMergerTool />
           </div>
         )}
 

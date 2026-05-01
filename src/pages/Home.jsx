@@ -120,10 +120,20 @@ export default function Home({ openTab }) {
               <span className={styles.featureTag}>Anchors</span>
             </div>
           </div>
-          <ToolCard 
-            color="var(--c6)" icon={<Layers size={28} />} name="دامج الصور" 
-            desc="دمج صور متعددة جنباً لجنب أو فوق بعض أو في تخطيط شبكي" 
-          />
+          <div 
+            onClick={() => handleOpen({ id: 'image-merger', title: 'دامج الصور', iconName: 'layers' })} 
+            style={{'--tool-color': 'var(--c6)'}} 
+            className={styles.toolCard}
+          >
+            <div className={styles.toolBadge}>جديد</div>
+            <div className={styles.toolIcon}><Layers size={28} /></div>
+            <div className={styles.toolName}>دامج الصور الاحترافي</div>
+            <div className={styles.toolDesc}>دمج صور متعددة جنباً لجنب أو فوق بعض أو في تخطيط شبكي بدقة عالية</div>
+            <div className={styles.toolFeatures}>
+              <span className={styles.featureTag}>سحب وإفلات</span>
+              <span className={styles.featureTag}>تخطيط ذكي</span>
+            </div>
+          </div>
           <ToolCard 
             color="var(--c7)" icon={<Palette size={28} />} name="مستخرج لوحة الألوان" 
             desc="استخرج الألوان المهيمنة من أي صورة وصدّرها بصيغ HEX وRGB" 
